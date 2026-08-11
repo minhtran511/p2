@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playable List - minhtqs.com</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background">
+        <span class="square square-0"></span>
+        <span class="square square-1"></span>
+        <span class="square square-2"></span>
+    </div>
+
+    <header class="header">
+        <div class="header-content">
+            <h1 class="header-title">Game Library</h1>
+            <p class="header-subtitle">Collection of Playable Ads Games</p>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="filters-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search games..." class="search-input">
+                <div class="search-icon">🔍</div>
+            </div>
+            
+            <div class="category-filters">
+                <button class="filter-btn active" data-category="all">All</button>
+                <button class="filter-btn" data-category="action">Action</button>
+                <button class="filter-btn" data-category="casual">Casual</button>
+                <button class="filter-btn" data-category="puzzle">Puzzle</button>
+                <button class="filter-btn" data-category="music">Music</button>
+                <button class="filter-btn" data-category="merge">Merge</button>
+                <button class="filter-btn" data-category="cooking">Cooking</button>
+                <button class="filter-btn" data-category="simulation">Simulation</button>
+                <button class="filter-btn" data-category="shooting">Shooting</button>
+                <button class="filter-btn" data-category="race">Race</button>
+                <button class="filter-btn" data-category="card">Card</button>
+            </div>
+        </div>
+
+        <div class="games-grid" id="gamesGrid">
+            <!-- Games sẽ được load bằng JavaScript -->
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Loading game library...</p>
+        </div>
+
+        <div class="no-results" id="noResults" style="display: none;">
+            <div class="no-results-icon">🎮</div>
+            <h3>No games found</h3>
+            <p>Try searching with different keywords or select another category</p>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>Playable Ads Preview - minhtqs.com</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

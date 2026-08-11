@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Device Preview - minhtqs.com</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <link rel="stylesheet" href="style.css" />
+    <script defer="defer" src="main.js"></script>
+</head>
+
+<body>
+    <span class="back"><span class="square square-0"></span>
+        <span class="square square-1"></span> <span class="square square-2"></span></span>
+    <nav id="navigation-container">
+        <div class="title-section display-l">screen ratio:</div>
+        <div class="title-section display-p">screen<br />ratio:</div>
+    </nav>
+    <nav id="orientation-container">
+        <div class="title-section">orientation:</div>
+    </nav>
+    <section id="device-container"></section>
+    <div id="zoom-container">
+        <div class="title-section">Zoom:</div>
+        <input type="range" min="40" max="100" step="20" value="80" id="scale" />
+    </div>
+    <div id="restart-container">
+        <a href="" class="navigation-item navigation-alt navigation-restart"></a>
+    </div>
+    <a href="https://playable.minhtqs.com/" target="_blank" class="logo"></a>
+    <a id="fullVersion" class="fullVersion">full screen mode</a>
+    
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading Game...</div>
+        </div>
+    </div>
+</body>
+
+</html>
