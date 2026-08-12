@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,7 @@
     <link rel="icon" id="favicon" href="data:,">
     <link rel="stylesheet" href="style.css">
     <script>
-        // Áp dụng theme trước khi render để tránh nhấp nháy
+        // Apply the theme before first paint to avoid a flash
         (function () {
             try {
                 const stored = localStorage.getItem('theme');
@@ -19,79 +19,183 @@
     </script>
     <script disable-devtool-auto src='https://cdn.jsdelivr.net/npm/disable-devtool'></script>
 </head>
+
 <body>
     <header class="topbar">
-        <div class="container topbar-inner">
-            <div class="brand">
+        <div class="topbar-inner">
+            <a class="brand" href="./" title="Reload the page">
                 <div class="brand-mark" aria-hidden="true">
-                    <!-- Logo lấy từ APP_CONFIG.logo trong config.js -->
                     <img id="brandLogo" alt="" hidden>
                 </div>
                 <div class="brand-text">
                     <span class="brand-title" id="headerTitle">Game Library</span>
                     <span class="brand-subtitle" id="headerSubtitle">Collection of Playable Ads Games</span>
                 </div>
-            </div>
+            </a>
 
-            <button class="btn-icon" id="themeToggle" type="button" aria-label="Toggle theme" title="Toggle theme">
-                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="4"></circle>
-                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
-                </svg>
-                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                </svg>
-            </button>
+            <div class="topbar-actions">
+                <!-- Total games / versions -->
+                <div class="stats" id="headerStats"></div>
+                <button class="btn-icon" id="themeToggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+                    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="4"></circle>
+                        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                    </svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
     </header>
 
-    <main class="container main-content">
-        <!-- Stat cards được render từ config.js -->
-        <section class="stats" id="headerStats"></section>
-
-        <section class="toolbar">
-            <div class="search-container">
-                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="11" cy="11" r="7"></circle>
-                    <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
-                </svg>
-                <input type="text" id="searchInput" placeholder="Search games..." class="search-input" autocomplete="off">
+    <div class="workspace">
+        <!-- ============ Left: search, filters, game list ============ -->
+        <aside class="sidebar">
+            <div class="sidebar-filters">
+                <div class="search-container">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search games..." class="search-input" autocomplete="off">
+                </div>
+                <!-- Tabs are generated from APP_CONFIG.categories -->
+                <div class="category-filters" id="categoryFilters"></div>
+                <p class="result-count" id="resultCount"></p>
             </div>
 
-            <!-- Tabs được sinh tự động từ APP_CONFIG.categories trong config.js -->
-            <div class="category-filters" id="categoryFilters"></div>
-        </section>
+            <div class="games-list" id="gamesGrid"></div>
 
-        <p class="result-count" id="resultCount"></p>
-
-        <div class="games-grid" id="gamesGrid">
-            <!-- Games sẽ được load bằng JavaScript -->
-        </div>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Loading game library...</p>
-        </div>
-
-        <div class="no-results" id="noResults" style="display: none;">
-            <div class="no-results-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="7"></circle>
-                    <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
-                </svg>
+            <div class="no-results" id="noResults" style="display: none;">
+                <h3>No games found</h3>
+                <p>Try another keyword or category</p>
             </div>
-            <h3>No games found</h3>
-            <p>Try searching with different keywords or select another category</p>
-        </div>
-    </main>
+        </aside>
+
+        <!-- ============ Middle: device frame ============ -->
+        <main class="stage">
+            <section id="device-container"></section>
+
+            <div class="stage-empty" id="stageEmpty">
+                <h3>No game selected</h3>
+                <p>Pick a version to start</p>
+            </div>
+
+            <div id="loading-overlay" class="loading-overlay">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Loading Game...</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ============ Right: device controls ============ -->
+        <aside id="control-panel">
+            <nav id="navigation-container">
+                <div class="title-section">screen ratio:</div>
+            </nav>
+
+            <div id="custom-size-container">
+                <div class="title-section">custom ratio:</div>
+                <div class="custom-size-fields">
+                    <input type="number" id="customRatioW" min="1" max="32" step="0.5" aria-label="Ratio width" />
+                    <span class="custom-size-x">:</span>
+                    <input type="number" id="customRatioH" min="1" max="32" step="0.5" aria-label="Ratio height" />
+                </div>
+            </div>
+
+            <div id="device-style-container">
+                <div class="title-section">screen:</div>
+                <div id="device-style"></div>
+                <button type="button" id="homeBarBtn" class="action-btn home-bar-btn" title="Toggle the home indicator bar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="6" y="2" width="12" height="20" rx="3"></rect>
+                        <line x1="9.5" y1="19" x2="14.5" y2="19"></line>
+                    </svg>
+                    <span class="btn-label">Home bar</span>
+                </button>
+                <div id="home-bar-position" class="segmented">
+                    <button type="button" class="seg-btn" data-position="device" title="Sits on the phone's bottom edge, opposite the cutout">Device</button>
+                    <button type="button" class="seg-btn" data-position="screen" title="Always horizontal along the bottom of the screen">Screen</button>
+                </div>
+            </div>
+
+            <nav id="orientation-container">
+                <div class="title-section">orientation:</div>
+                <div class="navigation-item navigation-rotate" id="rotateBtn" title="Rotate device">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                        <polyline points="21 3 21 9 15 9"></polyline>
+                    </svg>
+                </div>
+            </nav>
+
+            <div id="radius-container">
+                <div class="title-section">corner radius: <span id="radiusValue">26px</span></div>
+                <input type="range" min="0" max="80" step="2" value="26" id="cornerRadius" />
+            </div>
+
+            <div id="zoom-container">
+                <div class="title-section">zoom: <span id="zoomValue">80%</span></div>
+                <input type="range" min="40" max="300" step="10" value="80" id="scale" />
+            </div>
+
+            <div id="actions-container">
+                <a href="" class="action-btn navigation-restart" title="Reload the current build">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12a9 9 0 1 0 2.64-6.36"></path>
+                        <polyline points="3 3 3 9 9 9"></polyline>
+                    </svg>
+                    <span class="btn-label">Restart game</span>
+                </a>
+                <button type="button" id="muteBtn" class="action-btn mute-btn" title="Mute">
+                    <svg class="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 5 6 9H2v6h4l5 4V5z"></path>
+                        <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"></path>
+                    </svg>
+                    <svg class="icon-sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 5 6 9H2v6h4l5 4V5z"></path>
+                        <path d="M22 9l-6 6M16 9l6 6"></path>
+                    </svg>
+                    <span class="btn-label">Sound on</span>
+                </button>
+                <button type="button" id="ctaBtn" class="action-btn cta-btn" title="Block CTA and show toast">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 4.5v9.2l2.3-2 2.6 5.1 2.3-1.1-2.5-5 3-.6z"></path>
+                        <path d="M4.5 9H2M6.2 5.2 4.5 3.5M9 2.5V1"></path>
+                    </svg>
+                    <span class="btn-label">CTA: toast</span>
+                </button>
+                <button type="button" id="fullscreenBtn" class="action-btn fullscreen-btn" title="Fullscreen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M16 21h3a2 2 0 0 0 2-2v-3M8 21H5a2 2 0 0 1-2-2v-3"></path>
+                    </svg>
+                    <span class="btn-label">Fullscreen</span>
+                </button>
+            </div>
+        </aside>
+    </div>
 
     <footer class="footer">
-        <div class="container footer-content">
+        <div class="footer-content">
             <p>Playable Ads Preview — minhtq.dev</p>
         </div>
     </footer>
 
+    <!-- Floating bar shown in fullscreen -->
+    <div id="fs-controls">
+        <button type="button" id="exitFullscreen" class="exit-fullscreen-btn" title="Exit fullscreen (Esc)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3M16 3v3a2 2 0 0 0 2 2h3M16 21v-3a2 2 0 0 1 2-2h3M8 21v-3a2 2 0 0 0-2-2H3"></path>
+            </svg>
+            <span>Exit fullscreen</span>
+        </button>
+    </div>
+
     <script src="config.js"></script>
+    <script src="device/config.js"></script>
+    <script src="device/main.js"></script>
     <script src="script.js"></script>
     <script>
         (function () {
@@ -105,4 +209,5 @@
         })();
     </script>
 </body>
+
 </html>

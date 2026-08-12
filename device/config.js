@@ -1,12 +1,13 @@
 /**
- * Cấu hình trang giả lập thiết bị.
+ * Device simulator configuration.
  */
 const DEVICE_CONFIG = {
     /**
-     * Chặn CTA của playable (window.open / link) và hiện toast thay vì mở tab mới.
-     * - enabled : trạng thái mặc định của nút bật/tắt (người dùng bấm đổi thì ưu tiên lựa chọn đó)
-     * - duration: thời gian toast tự tắt, tính bằng mili giây
-     * - message : nội dung hiển thị
+     * Intercept the playable CTA (window.open / links) and show a toast
+     * instead of opening a new tab.
+     * - enabled : default state of the toggle button (user choice wins afterwards)
+     * - duration: how long the toast stays, in milliseconds
+     * - message : toast text
      */
     ctaToast: {
         enabled: true,
@@ -15,9 +16,25 @@ const DEVICE_CONFIG = {
     },
 
     /**
-     * Độ phân giải ép cho game vẽ (devicePixelRatio giả).
-     * Nên đặt >= mức zoom tối đa (3 tương ứng zoom 300%) để phóng to vẫn nét.
-     * Càng cao thì máy phải vẽ càng nặng, hạ xuống 2 nếu thấy game giật.
+     * Rendering resolution forced on the game (fake devicePixelRatio).
+     * Keep it >= the maximum zoom level (3 matches 300%) so zooming stays sharp.
+     * Higher values cost more GPU time - drop to 2 if a game stutters.
      */
-    renderScale: 3
+    renderScale: 3,
+
+    /**
+     * Default corner radius of the phone frame, in pixels.
+     * The screen radius follows automatically (frame radius minus the bezel).
+     */
+    cornerRadius: 26,
+
+    /** Show the iPhone-style home indicator bar by default. */
+    homeBar: true,
+
+    /**
+     * Where the home bar sits in landscape:
+     * - "device": on the phone's bottom edge, opposite the cutout (like a real phone)
+     * - "screen": always horizontal along the bottom of the screen
+     */
+    homeBarPosition: "device"
 };

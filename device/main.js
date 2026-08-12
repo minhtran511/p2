@@ -1,6 +1,5 @@
 /**
- * Lớp quản lý việc lưu trữ và truy xuất các cài đặt từ localStorage.
- * Có giá trị mặc định nếu không tìm thấy trong storage.
+ * Reads and writes settings in localStorage, falling back to defaults.
  */
 class StorageManager {
     constructor(defaultSettings) {
@@ -9,9 +8,9 @@ class StorageManager {
     }
 
     /**
-     * Thiết lập một giá trị vào storage và localStorage.
-     * @param {string} key - Khóa của tham số.
-     * @param {string} value - Giá trị của tham số.
+     * Stores a value in memory and localStorage.
+     * @param {string} key - Setting key.
+     * @param {string} value - Setting value.
      */
     setParameter(key, value) {
         this.storage[key] = value;
@@ -21,9 +20,9 @@ class StorageManager {
     }
 
     /**
-     * Lấy một giá trị từ storage, localStorage hoặc giá trị mặc định.
-     * @param {string} key - Khóa của tham số.
-     * @returns {string} Giá trị của tham số.
+     * Reads a value from memory, localStorage or the defaults.
+     * @param {string} key - Setting key.
+     * @returns {string} The stored value.
      */
     getParameter(key) {
         if (this.storage[key] !== undefined) {
@@ -40,7 +39,7 @@ class StorageManager {
 }
 
 /**
- * Lớp quản lý giao diện thiết bị mô phỏng, bao gồm iframe và việc thay đổi kích thước.
+ * Owns the simulated device: the iframe, its size and the on-screen extras.
  */
 class Device {
     constructor(screens, storage, parentElement) {
@@ -65,120 +64,117 @@ class Device {
         this.iframe.setAttribute("allow", "autoplay");
         this.screen.append(this.iframe);
 
-        // Phần khoét màn hình (tai thỏ / viên thuốc / nốt ruồi)
+        // Screen cutout (notch / island / punch hole)
         this.cutout = document.createElement("span");
         this.cutout.className = "cutout";
         this.screen.append(this.cutout);
 
-        // Toast báo đã bấm CTA, đổ từ mép trên màn hình xuống
+        // iPhone-style home indicator bar
+        this.homeBar = document.createElement("span");
+        this.homeBar.className = "home-bar";
+        this.screen.append(this.homeBar);
+
+        // CTA toast, slides down from the top edge of the screen
         this.toast = document.createElement("div");
         this.toast.className = "cta-toast";
         this.screen.append(this.toast);
         
-        // Loading overlay elements
+        // Loading overlay lives inside the phone screen, above the iframe
         this.loadingOverlay = document.getElementById("loading-overlay");
+        if (this.loadingOverlay) {
+            this.screen.append(this.loadingOverlay);
+        }
+
+        // Hide the loader once the iframe is ready
+        this.iframe.addEventListener("load", () => this.hideLoading());
+        this.iframe.addEventListener("error", () => this.hideLoading());
 
         this.parent.append(this.element);
     }
 
     /**
-     * Lấy URL của trang từ query params và thiết lập nó cho iframe.
+     * Loads a build into the iframe.
+     *
+     * The html is fetched first so a tiny bootstrap script can be injected at the
+     * very top of <head>. That script raises devicePixelRatio *before* the game
+     * runs, which is the only reliable way to make the canvas allocate a
+     * high-resolution backing store - patching it afterwards is a race the game
+     * usually wins, and the preview ends up blurry when zoomed.
+     * If the fetch fails for any reason we fall back to a plain src assignment.
+     *
+     * @param {string} path - Path to the game html file.
      */
-    setPage() {
-        const pageUrl = this.getPage();
-        if (pageUrl) {
-            this.showLoading();
-            this.iframe.setAttribute("src", pageUrl);
-            this.watchFrame();
+    loadPage(path) {
+        if (!path) {
+            return;
+        }
 
-            // Ẩn loading khi iframe đã tải xong
-            this.iframe.addEventListener("load", () => {
-                this.hideLoading();
+        this.pagePath = path;
+        this.showLoading();
+
+        const scale = Device.renderScale;
+        const baseHref = path.replace(/[^/]+$/, "");
+        const bootstrap = "<base href=\"" + baseHref + "\">" +
+            "<script>Object.defineProperty(window,'devicePixelRatio',{configurable:true," +
+            "get:function(){return " + scale + "}});window.__devicePixelRatioPatched=true;<\/script>";
+
+        fetch(path)
+            .then((response) => response.text())
+            .then((html) => {
+                if (this.pagePath !== path) {
+                    return;
+                }
+                const withBootstrap = /<head[^>]*>/i.test(html)
+                    ? html.replace(/<head[^>]*>/i, (match) => match + bootstrap)
+                    : bootstrap + html;
+
+                this.iframe.removeAttribute("src");
+                this.iframe.srcdoc = withBootstrap;
+                this.watchFrame();
+            })
+            .catch(() => {
+                const hash = Math.floor(Math.random() * 10000);
+                this.iframe.removeAttribute("srcdoc");
+                this.iframe.setAttribute("src", `${path}?hash=${hash}`);
                 this.watchFrame();
             });
-            
-            // Ẩn loading nếu có lỗi
-            this.iframe.addEventListener("error", () => {
-                this.hideLoading();
-            });
-        }
-        this.body.classList.remove("no-page");
-        this.body.classList.add("_show-all");
     }
 
     /**
-     * Phân tích URL hiện tại để lấy tham số 'page'.
-     * Tham số được cất vào sessionStorage rồi xoá khỏi thanh địa chỉ,
-     * nên URL hiển thị chỉ còn `/device/` (F5 vẫn giữ nguyên game đang xem).
-     * @returns {string} URL của trang để tải trong iframe.
+     * Reloads whatever build is currently shown.
      */
-    getPage() {
-        const searchParams = new URLSearchParams(window.location.search);
-        let page = searchParams.get("page");
-        let lang = searchParams.get("lang");
-
-        if (page) {
-            // Lần đầu vào trang: nhớ tham số rồi dọn URL
-            try {
-                sessionStorage.setItem("devicePage", page);
-                if (lang) {
-                    sessionStorage.setItem("deviceLang", lang);
-                } else {
-                    sessionStorage.removeItem("deviceLang");
-                }
-            } catch (e) { }
-            window.history.replaceState({}, "", window.location.pathname);
-        } else {
-            // URL đã được dọn (hoặc user F5): lấy lại tham số đã nhớ
-            try {
-                page = sessionStorage.getItem("devicePage");
-                lang = sessionStorage.getItem("deviceLang");
-            } catch (e) { }
+    reload() {
+        if (this.pagePath) {
+            this.loadPage(this.pagePath);
         }
-
-        // Cung cấp trang mặc định khi chạy trên localhost
-        if (!page && window.location.host.includes("localhost")) {
-            page = "index.html";
-        }
-
-        if (page) {
-            const hash = Math.floor(Math.random() * 10000);
-            let url = `${page}?hash=${hash}`;
-            if (lang) {
-                url = `${url}&lang=${lang}`;
-            }
-            return url;
-        }
-
-        return "";
     }
 
     /**
-     * Thiết lập tỷ lệ phóng to/thu nhỏ cho container của thiết bị.
+     * Applies the zoom level to the device container.
      */
     setScale() {
-        // Kẹp lại phòng khi localStorage còn giá trị cũ ngoài dải cho phép
+        // Clamp in case localStorage still holds an out-of-range value
         const screenScale = Math.min(300, Math.max(40, parseInt(this.storage.getParameter("screenScale"), 10) || 80));
         this.parent.style.transform = `scale(${screenScale / 100})`;
         return screenScale;
     }
 
     /**
-     * Thay đổi kích thước iframe dựa trên màn hình và hướng đã chọn.
+     * Resizes the iframe from the selected screen ratio and orientation.
      */
     resize() {
         const screenKey = this.storage.getParameter("screen");
         const screenConfig = this.screens[screenKey];
         const orientation = this.storage.getParameter("orientation");
 
-        // Tỷ lệ tuỳ chỉnh: quy về cạnh dài / cạnh ngắn rồi dùng chung logic bên dưới,
-        // nhờ vậy vẫn đổi được dọc/ngang và không bao giờ tràn khung
+        // Custom ratio: normalise to long side / short side and reuse the logic
+        // below, so orientation still works and the frame never overflows
         if (screenConfig.isCustom) {
             const ratioW = Device.clampRatio(this.storage.getParameter("customRatioW"), 16);
             const ratioH = Device.clampRatio(this.storage.getParameter("customRatioH"), 9);
             const ratio = Math.max(ratioW, ratioH) / Math.min(ratioW, ratioH);
 
-            // Chặn tỷ lệ quá dài (vd 50:1) làm khung dài vô tội vạ
+            // Cap extreme ratios (e.g. 50:1) so the frame cannot grow forever
             screenConfig.ratio = Math.min(3, ratio);
         }
 
@@ -199,16 +195,16 @@ class Device {
     }
     
     /**
-     * Hiện toast trong màn hình máy. Bấm liên tục thì toast chạy lại từ đầu.
-     * @param {string} message - Nội dung hiển thị.
-     * @param {number} duration - Thời gian tự tắt (ms).
+     * Shows the toast inside the phone screen; spamming restarts the animation.
+     * @param {string} message - Text to display.
+     * @param {number} duration - Auto-hide delay in ms.
      */
     showToast(message, duration) {
         this.toast.textContent = message;
 
         clearTimeout(this.toastTimer);
         this.toast.classList.remove("_show");
-        // Ép trình duyệt vẽ lại để animation chạy lại khi spam
+        // Force a reflow so the animation restarts on repeated clicks
         void this.toast.offsetWidth;
         this.toast.classList.add("_show");
 
@@ -218,7 +214,7 @@ class Device {
     }
 
     /**
-     * @returns {Window|null} window bên trong iframe (null nếu không truy cập được).
+     * @returns {Window|null} The iframe window, or null when unreachable.
      */
     getFrameWindow() {
         try {
@@ -229,8 +225,8 @@ class Device {
     }
 
     /**
-     * Báo cho bên ngoài mỗi khi iframe có document mới, để cài cầu nối âm thanh
-     * càng sớm càng tốt (trước khi game kịp khởi tạo AudioContext).
+     * Notifies the app whenever the iframe gets a new document, so the bridges can
+     * be installed before the game creates its AudioContext.
      */
     watchFrame() {
         if (typeof this.onFrameReady !== "function") {
@@ -241,20 +237,20 @@ class Device {
         }
 
         this.onFrameReady();
-        // Dò dày trong 5s đầu để chen vào trước lúc game khởi tạo audio/canvas
+        // Poll hard for 5s to get in before the game sets up audio/canvas
         this.frameWatcher = setInterval(() => this.onFrameReady(), 16);
         setTimeout(() => {
             clearInterval(this.frameWatcher);
-            // Sau đó dò thưa, để bắt iframe con hoặc audio sinh muộn
+            // Then poll slowly to catch late child frames or audio
             this.frameWatcher = setInterval(() => this.onFrameReady(), 1000);
         }, 5000);
     }
 
     /**
-     * Giới hạn một vế của tỷ lệ tuỳ chỉnh trong khoảng hợp lệ.
-     * @param {string|number} value - Giá trị người dùng nhập.
-     * @param {number} fallback - Giá trị dùng khi nhập sai/để trống.
-     * @returns {number} Một vế của tỷ lệ.
+     * Clamps one side of the custom ratio to a sane range.
+     * @param {string|number} value - Raw user input.
+     * @param {number} fallback - Used when the input is invalid.
+     * @returns {number} One side of the ratio.
      */
     static clampRatio(value, fallback) {
         const ratio = parseFloat(value);
@@ -265,7 +261,7 @@ class Device {
     }
 
     /**
-     * Hiển thị loading overlay
+     * Shows the loading overlay
      */
     showLoading() {
         if (this.loadingOverlay) {
@@ -274,7 +270,7 @@ class Device {
     }
     
     /**
-     * Ẩn loading overlay
+     * Hides the loading overlay
      */
     hideLoading() {
         if (this.loadingOverlay) {
@@ -284,7 +280,7 @@ class Device {
 }
 
 /**
- * Lớp tạo và quản lý thanh điều hướng để chọn kích thước màn hình.
+ * Builds and manages the screen ratio buttons.
  */
 class Navigation {
     constructor(screens, storage) {
@@ -303,8 +299,8 @@ class Navigation {
     }
 
     /**
-     * Đánh dấu mục đang hoạt động trong thanh điều hướng.
-     * @param {string} key - Khóa của kích thước màn hình.
+     * Marks the active item.
+     * @param {string} key - Screen ratio key.
      */
     setActiveItem(key) {
         this.items.forEach(item => {
@@ -314,8 +310,8 @@ class Navigation {
     }
 
     /**
-     * Thay đổi kích thước màn hình hiện tại.
-     * @param {string} [screenKey] - Khóa của kích thước màn hình.
+     * Switches the current screen ratio.
+     * @param {string} [screenKey] - Screen ratio key.
      */
     changeSize(screenKey) {
         const key = screenKey || this.storage.getParameter("screen");
@@ -325,7 +321,7 @@ class Navigation {
     }
 
     /**
-     * Khởi tạo các sự kiện click cho thanh điều hướng.
+     * Wires up the click handling.
      */
     initEvents() {
         let isLocked = false;
@@ -341,10 +337,10 @@ class Navigation {
     }
 
     /**
-     * Tạo một mục điều hướng.
-     * @param {string} key - Khóa của màn hình.
-     * @param {object} screenData - Dữ liệu của màn hình.
-     * @returns {HTMLElement} - Phần tử mục điều hướng.
+     * Creates one navigation item.
+     * @param {string} key - Screen key.
+     * @param {object} screenData - Screen definition.
+     * @returns {HTMLElement} The navigation item.
      */
     createItem(key, screenData) {
         const item = document.createElement("div");
@@ -366,7 +362,7 @@ class Navigation {
 }
 
 /**
- * Lớp quản lý nút chuyển đổi hướng (dọc/ngang).
+ * Portrait / landscape toggle.
  */
 class OrientationControl {
     constructor(storage) {
@@ -388,8 +384,8 @@ class OrientationControl {
     }
 
     /**
-     * Thay đổi hướng và cập nhật class trên body.
-     * @param {string} [orientation] - 'p' cho dọc, 'l' cho ngang.
+     * Changes orientation and updates the body classes.
+     * @param {string} [orientation] - 'p' portrait, 'l' landscape.
      */
     change(orientation) {
         const newOrientation = orientation || this.storage.getParameter("orientation");
@@ -407,7 +403,7 @@ class OrientationControl {
     }
 
     /**
-     * Khởi tạo sự kiện click để chuyển đổi hướng.
+     * Wires up the click handling.
      */
     initEvents() {
         this.element.addEventListener("click", (event) => {
@@ -419,8 +415,8 @@ class OrientationControl {
 }
 
 /**
- * Lớp quản lý chế độ toàn màn hình: iframe tràn kín vùng nhìn thấy của trang
- * (không dùng fullscreen F11 của trình duyệt), chỉ còn một nút thu nhỏ nổi phía trên.
+ * Fullscreen mode: the iframe fills the visible page area (not the browser's own
+ * F11 fullscreen), leaving only a floating exit button.
  */
 class FullscreenControl {
     constructor(enterButton, exitButton, muteButton) {
@@ -438,7 +434,7 @@ class FullscreenControl {
 
     enter() {
         this.body.classList.add("fullscreen-mode");
-        // Bảng điều khiển bị ẩn, nhưng vẫn cần nút tiếng -> đưa lên thanh nổi cạnh nút thu nhỏ
+        // The panel is hidden, so move the sound button onto the floating bar
         const bar = document.getElementById("fs-controls");
         if (this.muteButton && bar) {
             bar.insertBefore(this.muteButton, this.exitButton);
@@ -477,7 +473,7 @@ class FullscreenControl {
 }
 
 /**
- * Lớp quản lý kiểu khoét màn hình: thường / tai thỏ / viên thuốc / nốt ruồi.
+ * Screen cutout styles: none / notch / island / punch hole.
  */
 class DeviceStyleControl {
     constructor(element, storage) {
@@ -492,7 +488,7 @@ class DeviceStyleControl {
     }
 
     /**
-     * Sinh các nút chọn từ bảng định nghĩa.
+     * Builds the buttons from the style table.
      */
     render() {
         if (!this.element) {
@@ -506,7 +502,7 @@ class DeviceStyleControl {
     }
 
     /**
-     * @param {string} style - Khóa kiểu khoét màn hình.
+     * @param {string} style - Cutout style key.
      */
     apply(style) {
         const found = this.styles.find((item) => item.key === style) || this.styles[0];
@@ -514,7 +510,7 @@ class DeviceStyleControl {
         this.styles.forEach((item) => {
             this.body.classList.toggle(`device-style-${item.key}`, item === found);
         });
-        // Vị trí phần khoét so với cạnh máy: giữa / lệch trái / lệch phải
+        // Cutout position along the edge: centre / start / end
         ["center", "start", "end"].forEach((align) => {
             this.body.classList.toggle(`cut-align-${align}`, align === found.align);
         });
@@ -543,9 +539,9 @@ class DeviceStyleControl {
 }
 
 /**
- * Bảng các kiểu khoét màn hình.
- * - key: dùng cho class `device-style-<key>` bên CSS
- * - align: vị trí so với cạnh máy (center/start/end); không có = màn phẳng
+ * Screen cutout styles.
+ * - key: maps to the `device-style-<key>` CSS class
+ * - align: position along the edge (center/start/end); omitted = flat screen
  */
 DeviceStyleControl.STYLES = [
     { key: "none", title: "Standard" },
@@ -561,8 +557,8 @@ DeviceStyleControl.STYLES = [
 ];
 
 /**
- * Lớp quản lý nút xoay máy 180°: chỉ đổi bên đặt tai thỏ/khoét màn hình,
- * khung máy và kích thước game giữ nguyên.
+ * Rotates the phone 180deg: only the cutout swaps sides, the frame and the game
+ * size stay exactly the same.
  */
 class RotateControl {
     constructor(button, storage) {
@@ -575,7 +571,7 @@ class RotateControl {
     }
 
     /**
-     * @param {boolean} rotated - Có xoay 180° hay không.
+     * @param {boolean} rotated - Whether the phone is flipped.
      */
     apply(rotated) {
         this.body.classList.toggle("rotated", rotated);
@@ -596,9 +592,9 @@ class RotateControl {
 }
 
 /**
- * Cầu nối âm thanh: cài vào window của iframe để tắt/bật được cả
- * thẻ <audio>/<video> lẫn Web Audio (loại mà game thường dùng).
- * @param {Window} win - window của iframe (cùng origin).
+ * Audio bridge injected into the iframe so muting covers both <audio>/<video>
+ * elements and Web Audio, which is what most games actually use.
+ * @param {Window} win - The same-origin iframe window.
  */
 function injectAudioBridge(win) {
     if (!win || win.__deviceAudioPatched) {
@@ -627,7 +623,7 @@ function injectAudioBridge(win) {
             return;
         }
 
-        // 1. Context tạo sau khi cầu nối được cài
+        // 1. Contexts created after the bridge is installed
         const Patched = function (...args) {
             const context = new Original(...args);
             remember(context);
@@ -636,8 +632,8 @@ function injectAudioBridge(win) {
         Patched.prototype = Original.prototype;
         win[name] = Patched;
 
-        // 2. Game tự gọi resume() (thường trong sự kiện chạm) sẽ mở tiếng trở lại
-        //    -> chặn khi đang tắt tiếng
+        // 2. Games call resume() on touch, which would unmute again
+        //    -> block it while muted
         const originalResume = Original.prototype.resume;
         if (originalResume && !Original.prototype.__deviceResumePatched) {
             Original.prototype.__deviceResumePatched = true;
@@ -651,8 +647,8 @@ function injectAudioBridge(win) {
         }
     });
 
-    // 3. Context tạo TRƯỚC khi cầu nối kịp cài (game khởi tạo audio rất sớm):
-    //    mọi node đều phải connect() nên bắt ở đây là tóm được context đang dùng
+    // 3. Contexts created BEFORE the bridge was installed (games that start audio
+    //    very early): every node must connect(), so hook that instead
     const AudioNode = win.AudioNode;
     if (AudioNode && !AudioNode.prototype.__deviceConnectPatched) {
         AudioNode.prototype.__deviceConnectPatched = true;
@@ -663,7 +659,7 @@ function injectAudioBridge(win) {
         };
     }
 
-    // 4. Thẻ <audio>/<video>: chặn cả play() lẫn việc game tự set muted = false
+    // 4. <audio>/<video>: block play() and any attempt to set muted = false
     const media = win.HTMLMediaElement;
     if (media && !media.prototype.__devicePlayPatched) {
         media.prototype.__devicePlayPatched = true;
@@ -710,7 +706,7 @@ function injectAudioBridge(win) {
         },
 
         /**
-         * Ảnh chụp trạng thái âm thanh, dùng để kiểm tra nhanh khi debug.
+         * Snapshot of the audio state, handy when debugging.
          */
         report() {
             let media = [];
@@ -727,8 +723,8 @@ function injectAudioBridge(win) {
 }
 
 /**
- * Trạng thái dùng chung cho các cầu nối tiêm vào iframe.
- * ClickControl gán vào đây, cầu nối đọc ra lúc người dùng bấm.
+ * Shared state for the bridges injected into the iframe.
+ * ClickControl writes here, the bridge reads it when a click happens.
  */
 const FRAME_HOOKS = {
     ctaEnabled: () => false,
@@ -736,9 +732,9 @@ const FRAME_HOOKS = {
 };
 
 /**
- * Chặn mọi đường mở link của playable (CTA) để không nhảy sang tab mới.
- * Bao gồm window.open, thẻ <a>, và mraid.open của quảng cáo.
- * @param {Window} win - window của iframe (cùng origin).
+ * Blocks every way a playable can open its store link: window.open, <a> tags
+ * and the ad SDK's mraid.open.
+ * @param {Window} win - The same-origin iframe window.
  */
 function injectClickBridge(win) {
     if (!win || win.__deviceClickPatched) {
@@ -754,17 +750,17 @@ function injectClickBridge(win) {
         return true;
     };
 
-    // window.open: đường phổ biến nhất của playable
+    // window.open: by far the most common path
     const originalOpen = win.open;
     win.open = function (...args) {
         if (intercept()) {
-            // Trả về cửa sổ giả để game gọi tiếp .focus()/.close() không lỗi
+            // Return a stub window so .focus()/.close() calls do not throw
             return { closed: false, focus() { }, close() { }, postMessage() { } };
         }
         return originalOpen.apply(win, args);
     };
 
-    // Thẻ <a href> (kể cả target="_blank")
+    // <a href> links, including target=_blank
     win.document.addEventListener("click", (event) => {
         const link = event.target && event.target.closest && event.target.closest("a[href]");
         if (!link) {
@@ -780,7 +776,7 @@ function injectClickBridge(win) {
         }
     }, true);
 
-    // mraid.open của SDK quảng cáo
+    // mraid.open from the ad SDK
     if (win.mraid && typeof win.mraid.open === "function") {
         const originalMraidOpen = win.mraid.open;
         win.mraid.open = function (...args) {
@@ -793,12 +789,12 @@ function injectClickBridge(win) {
 }
 
 /**
- * Nâng độ phân giải vẽ của game: báo devicePixelRatio cao hơn để engine
- * (Phaser/Pixi/Cocos/Unity...) dựng canvas với backing store lớn hơn.
- * Nhờ vậy phóng to khung máy vẫn nét thay vì bị kéo giãn ảnh.
- * Phải cài trước khi game khởi tạo canvas nên mới cần watchFrame dò liên tục.
- * @param {Window} win - window của iframe (cùng origin).
- * @param {number} ratio - tỷ lệ vẽ mong muốn.
+ * Raises the game's rendering resolution by reporting a higher devicePixelRatio,
+ * so engines (Phaser/Pixi/Cocos/Unity...) allocate a bigger canvas backing
+ * store and zooming stays sharp instead of being upscaled.
+ * Must run before the game creates its canvas, hence the watchFrame polling.
+ * @param {Window} win - The same-origin iframe window.
+ * @param {number} ratio - Desired rendering scale.
  */
 function injectPixelRatio(win, ratio) {
     if (!win || win.__devicePixelRatioPatched) {
@@ -814,7 +810,7 @@ function injectPixelRatio(win, ratio) {
 }
 
 /**
- * Lớp quản lý nút tắt/bật âm thanh của game trong iframe.
+ * Mute toggle for the game running in the iframe.
  */
 class AudioControl {
     constructor(button, device, storage) {
@@ -830,17 +826,17 @@ class AudioControl {
     }
 
     /**
-     * Đẩy trạng thái tắt/bật tiếng vào iframe.
+     * Pushes the mute state into the iframe.
      */
     apply() {
         this.applyTo(this.device.getFrameWindow(), 0);
     }
 
     /**
-     * Cài cầu nối cho một window rồi đệ quy xuống các iframe con
-     * (nhiều playable nhét game trong iframe lồng thêm một tầng).
-     * @param {Window} win - window cần xử lý.
-     * @param {number} depth - độ sâu hiện tại, chặn ở 3 tầng cho an toàn.
+     * Installs the bridges in a window, then recurses into child frames
+     * (some playables nest the game in another iframe).
+     * @param {Window} win - Window to patch.
+     * @param {number} depth - Current depth, capped at 3 levels.
      */
     applyTo(win, depth) {
         if (!win || depth > 3) {
@@ -874,7 +870,12 @@ class AudioControl {
             return;
         }
         this.button.classList.toggle("_muted", this.muted);
-        this.button.title = this.muted ? "Unmute" : "Mute";
+        this.button.title = this.muted ? "Sound is off — click to unmute" : "Sound is on — click to mute";
+
+        const label = this.button.querySelector(".btn-label");
+        if (label) {
+            label.textContent = this.muted ? "Sound off" : "Sound on";
+        }
     }
 
     initEvents() {
@@ -884,13 +885,134 @@ class AudioControl {
     }
 }
 
-// Chạy mã sau khi trang đã tải xong
-// Độ phân giải vẽ ép cho game, để phóng to khung máy vẫn nét
-AudioControl.RENDER_SCALE = (typeof DEVICE_CONFIG !== "undefined" && DEVICE_CONFIG.renderScale) || 2;
+// Run once the page has finished loading
+/**
+ * Home indicator bar at the bottom of the screen.
+ */
+class HomeBarControl {
+    constructor(button, positionGroup, storage, config) {
+        this.button = button;
+        this.positionGroup = positionGroup;
+        this.storage = storage;
+        this.config = config || {};
+        this.body = document.querySelector("body");
+
+        const stored = this.storage.getParameter("homeBar");
+        this.apply(stored === "" ? this.config.homeBar !== false : stored === "true");
+        this.applyPosition(this.storage.getParameter("homeBarPosition") || this.config.homeBarPosition);
+        this.initEvents();
+    }
+
+    /**
+     * @param {string} position - "device" (opposite the cutout) or "screen" (always at the bottom).
+     */
+    applyPosition(position) {
+        const value = position === "screen" ? "screen" : "device";
+
+        this.body.classList.toggle("home-bar-screen", value === "screen");
+        this.storage.setParameter("homeBarPosition", value);
+
+        if (this.positionGroup) {
+            this.positionGroup.querySelectorAll(".seg-btn").forEach((item) => {
+                item.classList.toggle("_active", item.dataset.position === value);
+            });
+        }
+    }
+
+    /**
+     * @param {boolean} visible - Whether the bar is drawn.
+     */
+    apply(visible) {
+        this.body.classList.toggle("has-home-bar", visible);
+        this.storage.setParameter("homeBar", visible);
+
+        if (this.button) {
+            this.button.classList.toggle("_active", visible);
+            this.button.title = visible
+                ? "Home bar is shown - click to hide it"
+                : "Home bar is hidden - click to show it";
+        }
+    }
+
+    initEvents() {
+        if (this.button) {
+            this.button.addEventListener("click", () => {
+                this.apply(!this.body.classList.contains("has-home-bar"));
+            });
+        }
+        if (this.positionGroup) {
+            this.positionGroup.addEventListener("click", (event) => {
+                const item = event.target.closest(".seg-btn");
+                if (item) {
+                    this.applyPosition(item.dataset.position);
+                }
+            });
+        }
+    }
+}
 
 /**
- * Lớp quản lý việc chặn CTA: bật thì bấm vào quảng cáo chỉ hiện toast,
- * tắt thì link mở bình thường như máy thật.
+ * Corner radius of the phone frame. The screen radius follows via CSS.
+ */
+class RadiusControl {
+    constructor(slider, label, storage, fallback) {
+        this.slider = slider;
+        this.label = label;
+        this.storage = storage;
+        this.fallback = fallback || 26;
+
+        this.apply(this.storage.getParameter("cornerRadius"));
+        this.initEvents();
+    }
+
+    /**
+     * @param {string|number} value - Radius in pixels.
+     */
+    apply(value) {
+        const radius = Math.min(80, Math.max(0, parseInt(value, 10) || 0));
+
+        document.documentElement.style.setProperty("--device-radius", `${radius}px`);
+        this.storage.setParameter("cornerRadius", radius);
+
+        if (this.slider) {
+            this.slider.value = radius;
+        }
+        if (this.label) {
+            this.label.textContent = `${radius}px`;
+        }
+    }
+
+    initEvents() {
+        if (this.slider) {
+            this.slider.addEventListener("input", () => this.apply(this.slider.value));
+        }
+    }
+}
+
+/**
+ * Light/dark toggle sharing the 'theme' key with the rest of the app.
+ */
+class ThemeControl {
+    constructor(button) {
+        this.button = button;
+        if (this.button) {
+            this.button.addEventListener("click", () => {
+                const dark = document.documentElement.classList.toggle("dark");
+                try {
+                    localStorage.setItem("theme", dark ? "dark" : "light");
+                } catch (e) { }
+            });
+        }
+    }
+}
+
+// Rendering scale forced on the game so zooming stays sharp
+Device.renderScale = (typeof DEVICE_CONFIG !== "undefined" && DEVICE_CONFIG.renderScale) || 2;
+AudioControl.RENDER_SCALE = Device.renderScale;
+
+/**
+ * CTA blocking: when enabled an ad click only shows a toast, when disabled the
+ * link opens normally like on a real device.
  */
 class ClickControl {
     constructor(button, device, storage, config) {
@@ -908,7 +1030,7 @@ class ClickControl {
             this.config.duration || 1500
         );
 
-        // Game gọi top.open()/parent.open() thì cũng phải chặn
+        // Games may call top.open()/parent.open(), block those too
         const originalOpen = window.open;
         window.open = (...args) => {
             if (this.enabled) {
@@ -932,8 +1054,13 @@ class ClickControl {
         if (this.button) {
             this.button.classList.toggle("_active", this.enabled);
             this.button.title = this.enabled
-                ? "CTA blocked — click to open real links"
-                : "CTA opens real links — click to block and show toast";
+                ? "Ad clicks show a toast — click to open real links instead"
+                : "Ad clicks open the real store link — click to block them";
+
+            const label = this.button.querySelector(".btn-label");
+            if (label) {
+                label.textContent = this.enabled ? "CTA: toast" : "CTA: real link";
+            }
         }
     }
 
@@ -945,7 +1072,7 @@ class ClickControl {
 }
 
 window.addEventListener("load", () => {
-    // Định nghĩa các loại màn hình
+    // Screen ratio definitions
     const screenDefinitions = {
         "4_3": { title: "4:3", code: "emn", ratio: 4 / 3 },
         "3_2": { title: "3:2", code: "mn", ratio: 1.5 },
@@ -957,12 +1084,11 @@ window.addEventListener("load", () => {
         "custom": { title: "Custom", code: "cst", ratio: 1, isCustom: true },
     };
 
-    // Lấy các phần tử DOM container
+    // Container elements
     const domElements = {
         navigation: document.getElementById("navigation-container"),
         orientation: document.getElementById("orientation-container"),
         device: document.getElementById("device-container"),
-        fullVersionLink: document.getElementById("fullVersion"),
         scaleInput: document.getElementById("scale"),
         zoomValue: document.getElementById("zoomValue"),
         customRatioW: document.getElementById("customRatioW"),
@@ -973,9 +1099,14 @@ window.addEventListener("load", () => {
         exitFullscreenBtn: document.getElementById("exitFullscreen"),
         muteBtn: document.getElementById("muteBtn"),
         ctaBtn: document.getElementById("ctaBtn"),
+        themeBtn: document.getElementById("themeBtn"),
+        cornerRadius: document.getElementById("cornerRadius"),
+        homeBarBtn: document.getElementById("homeBarBtn"),
+        homeBarPosition: document.getElementById("home-bar-position"),
+        radiusValue: document.getElementById("radiusValue"),
     };
 
-    // Khởi tạo các module
+    // Bootstrap the modules
     const storage = new StorageManager({
         screen: "16_9",
         orientation: "l",
@@ -984,34 +1115,39 @@ window.addEventListener("load", () => {
         customRatioH: 9,
         deviceStyle: "none",
         rotated: false,
+        cornerRadius: (typeof DEVICE_CONFIG !== "undefined" && DEVICE_CONFIG.cornerRadius) || 26,
     });
     
     const navigation = new Navigation(screenDefinitions, storage);
     const orientationControl = new OrientationControl(storage);
     const device = new Device(screenDefinitions, storage, domElements.device);
 
-    // Gắn các thành phần vào DOM
+    // Attach the widgets to the DOM
     domElements.navigation.append(navigation.element);
     domElements.orientation.append(orientationControl.element);
-    // Nút xoay đứng sau nút đổi hướng
+    // The rotate button sits after the orientation button
     domElements.orientation.append(domElements.rotateBtn);
 
-    // Thiết lập trạng thái ban đầu
+    // Initial state
     navigation.changeSize();
     orientationControl.change();
     device.resize();
-    device.setPage();
     device.setScale();
     domElements.scaleInput.value = storage.getParameter("screenScale");
 
-    // Chế độ toàn màn hình + tắt/bật âm thanh + kiểu khoét màn hình
+    // Fullscreen + mute + screen cutout controls
     new FullscreenControl(domElements.fullscreenBtn, domElements.exitFullscreenBtn, domElements.muteBtn);
     new AudioControl(domElements.muteBtn, device, storage);
     new DeviceStyleControl(domElements.deviceStyle, storage);
+    new ThemeControl(domElements.themeBtn);
     new ClickControl(domElements.ctaBtn, device, storage, (typeof DEVICE_CONFIG !== "undefined" ? DEVICE_CONFIG.ctaToast : null));
     new RotateControl(domElements.rotateBtn, storage);
+    new RadiusControl(domElements.cornerRadius, domElements.radiusValue, storage,
+        (typeof DEVICE_CONFIG !== "undefined" ? DEVICE_CONFIG.cornerRadius : 26));
+    new HomeBarControl(domElements.homeBarBtn, domElements.homeBarPosition, storage,
+        (typeof DEVICE_CONFIG !== "undefined" ? DEVICE_CONFIG : {}));
 
-    // Tỷ lệ tuỳ chỉnh: đổ giá trị đã lưu và chỉ hiện ô nhập khi tab Custom đang chọn
+    // Custom ratio: restore saved values, inputs only show on the Custom tab
     const syncCustomPanel = () => {
         document.body.classList.toggle("custom-active", storage.getParameter("screen") === "custom");
     };
@@ -1039,7 +1175,7 @@ window.addEventListener("load", () => {
         });
     });
 
-    // Gắn các event listener
+    // Event wiring
     navigation.element.addEventListener("change", () => {
         syncCustomPanel();
         device.resize();
@@ -1058,33 +1194,23 @@ window.addEventListener("load", () => {
             domElements.zoomValue.textContent = `${scaleValue}%`;
         }
     };
-    // input: kéo tới đâu phóng tới đó, không phải thả chuột mới đổi
+    // 'input' so the zoom follows the slider live instead of on release
     domElements.scaleInput.addEventListener("input", applyScale);
     applyScale();
     
-    // Thêm loading khi click restart
+    // Show the loader when restarting
     const restartBtn = document.querySelector(".navigation-restart");
     if (restartBtn) {
         restartBtn.addEventListener("click", (e) => {
-            const currentSrc = device.iframe.src;
-            if (currentSrc) {
-                e.preventDefault();
-                device.showLoading();
-                
-                // Reload iframe
-                device.iframe.src = "";
-                setTimeout(() => {
-                    device.iframe.src = currentSrc;
-                    device.watchFrame();
-                }, 100);
-            }
+            e.preventDefault();
+            device.reload();
         });
     }
-    
-    // Hiển thị link "Full Version" trên thiết bị di động
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-    if (/iPad|iPhone|iPod|Android/.test(userAgent) && !window.MSStream) {
-        domElements.fullVersionLink.href = device.getPage();
-        domElements.fullVersionLink.classList.add("_visible");
-    }
+
+    // The app uses this API to load a build when a version is clicked
+    window.deviceApi = {
+        device,
+        load: (path) => device.loadPage(path)
+    };
+
 });
