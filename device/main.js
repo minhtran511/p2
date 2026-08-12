@@ -64,6 +64,11 @@ class Device {
         this.iframe.id = "iframe";
         this.iframe.setAttribute("allow", "autoplay");
         this.screen.append(this.iframe);
+
+        // Phần khoét màn hình (tai thỏ / viên thuốc / nốt ruồi)
+        this.cutout = document.createElement("span");
+        this.cutout.className = "cutout";
+        this.screen.append(this.cutout);
         
         // Loading overlay elements
         this.loadingOverlay = document.getElementById("loading-overlay");
@@ -79,10 +84,12 @@ class Device {
         if (pageUrl) {
             this.showLoading();
             this.iframe.setAttribute("src", pageUrl);
-            
+            this.watchFrame();
+
             // Ẩn loading khi iframe đã tải xong
             this.iframe.addEventListener("load", () => {
                 this.hideLoading();
+                this.watchFrame();
             });
             
             // Ẩn loading nếu có lỗi
@@ -145,8 +152,10 @@ class Device {
      * Thiết lập tỷ lệ phóng to/thu nhỏ cho container của thiết bị.
      */
     setScale() {
-        const screenScale = this.storage.getParameter("screenScale");
+        // Kẹp lại phòng khi localStorage còn giá trị cũ ngoài dải cho phép
+        const screenScale = Math.min(200, Math.max(40, parseInt(this.storage.getParameter("screenScale"), 10) || 80));
         this.parent.style.transform = `scale(${screenScale / 100})`;
+        return screenScale;
     }
 
     /**
@@ -156,6 +165,17 @@ class Device {
         const screenKey = this.storage.getParameter("screen");
         const screenConfig = this.screens[screenKey];
         const orientation = this.storage.getParameter("orientation");
+
+        // Tỷ lệ tuỳ chỉnh: quy về cạnh dài / cạnh ngắn rồi dùng chung logic bên dưới,
+        // nhờ vậy vẫn đổi được dọc/ngang và không bao giờ tràn khung
+        if (screenConfig.isCustom) {
+            const ratioW = Device.clampRatio(this.storage.getParameter("customRatioW"), 16);
+            const ratioH = Device.clampRatio(this.storage.getParameter("customRatioH"), 9);
+            const ratio = Math.max(ratioW, ratioH) / Math.min(ratioW, ratioH);
+
+            // Chặn tỷ lệ quá dài (vd 50:1) làm khung dài vô tội vạ
+            screenConfig.ratio = Math.min(3, ratio);
+        }
 
         const baseWidth = screenConfig.ratio < 1.8 ? 320 : 375;
         this.body.classList.toggle("bigscreen", screenConfig.ratio >= 2);
@@ -173,6 +193,53 @@ class Device {
         this.iframe.style.height = `${height}px`;
     }
     
+    /**
+     * @returns {Window|null} window bên trong iframe (null nếu không truy cập được).
+     */
+    getFrameWindow() {
+        try {
+            return this.iframe.contentWindow;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * Báo cho bên ngoài mỗi khi iframe có document mới, để cài cầu nối âm thanh
+     * càng sớm càng tốt (trước khi game kịp khởi tạo AudioContext).
+     */
+    watchFrame() {
+        if (typeof this.onFrameReady !== "function") {
+            return;
+        }
+        if (this.frameWatcher) {
+            clearInterval(this.frameWatcher);
+        }
+
+        this.onFrameReady();
+        // Dò dày trong 5s đầu để chen vào trước lúc game khởi tạo audio/canvas
+        this.frameWatcher = setInterval(() => this.onFrameReady(), 16);
+        setTimeout(() => {
+            clearInterval(this.frameWatcher);
+            // Sau đó dò thưa, để bắt iframe con hoặc audio sinh muộn
+            this.frameWatcher = setInterval(() => this.onFrameReady(), 1000);
+        }, 5000);
+    }
+
+    /**
+     * Giới hạn một vế của tỷ lệ tuỳ chỉnh trong khoảng hợp lệ.
+     * @param {string|number} value - Giá trị người dùng nhập.
+     * @param {number} fallback - Giá trị dùng khi nhập sai/để trống.
+     * @returns {number} Một vế của tỷ lệ.
+     */
+    static clampRatio(value, fallback) {
+        const ratio = parseFloat(value);
+        if (isNaN(ratio) || ratio <= 0) {
+            return fallback;
+        }
+        return Math.min(32, Math.max(1, Math.round(ratio * 10) / 10));
+    }
+
     /**
      * Hiển thị loading overlay
      */
@@ -327,7 +394,409 @@ class OrientationControl {
     }
 }
 
+/**
+ * Lớp quản lý chế độ toàn màn hình: iframe tràn kín vùng nhìn thấy của trang
+ * (không dùng fullscreen F11 của trình duyệt), chỉ còn một nút thu nhỏ nổi phía trên.
+ */
+class FullscreenControl {
+    constructor(enterButton, exitButton, muteButton) {
+        this.body = document.querySelector("body");
+        this.enterButton = enterButton;
+        this.exitButton = exitButton;
+        this.muteButton = muteButton;
+        this.muteHome = muteButton ? muteButton.parentElement : null;
+        this.initEvents();
+    }
+
+    get isActive() {
+        return this.body.classList.contains("fullscreen-mode");
+    }
+
+    enter() {
+        this.body.classList.add("fullscreen-mode");
+        // Bảng điều khiển bị ẩn, nhưng vẫn cần nút tiếng -> đưa lên thanh nổi cạnh nút thu nhỏ
+        const bar = document.getElementById("fs-controls");
+        if (this.muteButton && bar) {
+            bar.insertBefore(this.muteButton, this.exitButton);
+        }
+    }
+
+    exit() {
+        this.body.classList.remove("fullscreen-mode");
+        if (this.muteButton && this.muteHome) {
+            this.muteHome.insertBefore(this.muteButton, this.enterButton);
+        }
+    }
+
+    toggle() {
+        if (this.isActive) {
+            this.exit();
+        } else {
+            this.enter();
+        }
+    }
+
+    initEvents() {
+        if (this.enterButton) {
+            this.enterButton.addEventListener("click", () => this.enter());
+        }
+        if (this.exitButton) {
+            this.exitButton.addEventListener("click", () => this.exit());
+        }
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && this.isActive) {
+                this.exit();
+            }
+        });
+    }
+}
+
+/**
+ * Lớp quản lý kiểu khoét màn hình: thường / tai thỏ / viên thuốc / nốt ruồi.
+ */
+class DeviceStyleControl {
+    constructor(element, storage) {
+        this.element = element;
+        this.storage = storage;
+        this.body = document.querySelector("body");
+        this.styles = DeviceStyleControl.STYLES;
+
+        this.render();
+        this.apply(this.storage.getParameter("deviceStyle"));
+        this.initEvents();
+    }
+
+    /**
+     * Sinh các nút chọn từ bảng định nghĩa.
+     */
+    render() {
+        if (!this.element) {
+            return;
+        }
+        this.element.innerHTML = this.styles.map((style) => `
+            <div class="navigation-item navigation-style" key="${style.key}" title="${style.title}">
+                <span class="style-preview"></span>
+            </div>
+        `).join("");
+    }
+
+    /**
+     * @param {string} style - Khóa kiểu khoét màn hình.
+     */
+    apply(style) {
+        const found = this.styles.find((item) => item.key === style) || this.styles[0];
+
+        this.styles.forEach((item) => {
+            this.body.classList.toggle(`device-style-${item.key}`, item === found);
+        });
+        // Vị trí phần khoét so với cạnh máy: giữa / lệch trái / lệch phải
+        ["center", "start", "end"].forEach((align) => {
+            this.body.classList.toggle(`cut-align-${align}`, align === found.align);
+        });
+        this.body.classList.toggle("has-cutout", Boolean(found.align));
+        this.storage.setParameter("deviceStyle", found.key);
+
+        if (this.element) {
+            this.element.querySelectorAll(".navigation-style").forEach((item) => {
+                item.classList.toggle("_active", item.getAttribute("key") === found.key);
+            });
+        }
+    }
+
+    initEvents() {
+        if (!this.element) {
+            return;
+        }
+        this.element.addEventListener("click", (event) => {
+            const item = event.target.closest(".navigation-style");
+            if (item) {
+                event.preventDefault();
+                this.apply(item.getAttribute("key"));
+            }
+        });
+    }
+}
+
+/**
+ * Bảng các kiểu khoét màn hình.
+ * - key: dùng cho class `device-style-<key>` bên CSS
+ * - align: vị trí so với cạnh máy (center/start/end); không có = màn phẳng
+ */
+DeviceStyleControl.STYLES = [
+    { key: "none", title: "Standard" },
+    { key: "wide-notch", title: "Wide notch", align: "center" },
+    { key: "notch", title: "Notch", align: "center" },
+    { key: "teardrop", title: "Teardrop", align: "center" },
+    { key: "island", title: "Dynamic Island", align: "center" },
+    { key: "punch", title: "Punch hole", align: "center" },
+    { key: "punch-left", title: "Punch hole left", align: "start" },
+    { key: "punch-right", title: "Punch hole right", align: "end" },
+    { key: "pill-left", title: "Pill left", align: "start" },
+    { key: "pill-right", title: "Pill right", align: "end" },
+];
+
+/**
+ * Lớp quản lý nút xoay máy 180°: chỉ đổi bên đặt tai thỏ/khoét màn hình,
+ * khung máy và kích thước game giữ nguyên.
+ */
+class RotateControl {
+    constructor(button, storage) {
+        this.button = button;
+        this.storage = storage;
+        this.body = document.querySelector("body");
+
+        this.apply(this.storage.getParameter("rotated") === "true");
+        this.initEvents();
+    }
+
+    /**
+     * @param {boolean} rotated - Có xoay 180° hay không.
+     */
+    apply(rotated) {
+        this.body.classList.toggle("rotated", rotated);
+        this.storage.setParameter("rotated", rotated);
+
+        if (this.button) {
+            this.button.classList.toggle("_active", rotated);
+        }
+    }
+
+    initEvents() {
+        if (this.button) {
+            this.button.addEventListener("click", () => {
+                this.apply(!this.body.classList.contains("rotated"));
+            });
+        }
+    }
+}
+
+/**
+ * Cầu nối âm thanh: cài vào window của iframe để tắt/bật được cả
+ * thẻ <audio>/<video> lẫn Web Audio (loại mà game thường dùng).
+ * @param {Window} win - window của iframe (cùng origin).
+ */
+function injectAudioBridge(win) {
+    if (!win || win.__deviceAudioPatched) {
+        return;
+    }
+    win.__deviceAudioPatched = true;
+
+    const contexts = [];
+    let muted = false;
+
+    const remember = (context) => {
+        if (!context || contexts.indexOf(context) !== -1) {
+            return;
+        }
+        contexts.push(context);
+        if (muted && context.suspend) {
+            try {
+                context.suspend();
+            } catch (e) { }
+        }
+    };
+
+    ["AudioContext", "webkitAudioContext"].forEach((name) => {
+        const Original = win[name];
+        if (!Original) {
+            return;
+        }
+
+        // 1. Context tạo sau khi cầu nối được cài
+        const Patched = function (...args) {
+            const context = new Original(...args);
+            remember(context);
+            return context;
+        };
+        Patched.prototype = Original.prototype;
+        win[name] = Patched;
+
+        // 2. Game tự gọi resume() (thường trong sự kiện chạm) sẽ mở tiếng trở lại
+        //    -> chặn khi đang tắt tiếng
+        const originalResume = Original.prototype.resume;
+        if (originalResume && !Original.prototype.__deviceResumePatched) {
+            Original.prototype.__deviceResumePatched = true;
+            Original.prototype.resume = function () {
+                remember(this);
+                if (muted) {
+                    return win.Promise ? win.Promise.resolve() : undefined;
+                }
+                return originalResume.apply(this, arguments);
+            };
+        }
+    });
+
+    // 3. Context tạo TRƯỚC khi cầu nối kịp cài (game khởi tạo audio rất sớm):
+    //    mọi node đều phải connect() nên bắt ở đây là tóm được context đang dùng
+    const AudioNode = win.AudioNode;
+    if (AudioNode && !AudioNode.prototype.__deviceConnectPatched) {
+        AudioNode.prototype.__deviceConnectPatched = true;
+        const originalConnect = AudioNode.prototype.connect;
+        AudioNode.prototype.connect = function () {
+            remember(this.context);
+            return originalConnect.apply(this, arguments);
+        };
+    }
+
+    // 4. Thẻ <audio>/<video>: chặn cả play() lẫn việc game tự set muted = false
+    const media = win.HTMLMediaElement;
+    if (media && !media.prototype.__devicePlayPatched) {
+        media.prototype.__devicePlayPatched = true;
+
+        const originalPlay = media.prototype.play;
+        media.prototype.play = function () {
+            if (muted) {
+                this.muted = true;
+            }
+            return originalPlay.apply(this, arguments);
+        };
+
+        const descriptor = Object.getOwnPropertyDescriptor(media.prototype, "muted");
+        if (descriptor && descriptor.get && descriptor.set) {
+            Object.defineProperty(media.prototype, "muted", {
+                configurable: true,
+                get: descriptor.get,
+                set(value) {
+                    descriptor.set.call(this, muted ? true : value);
+                }
+            });
+        }
+    }
+
+    win.__deviceAudio = {
+        set(value) {
+            muted = value;
+
+            contexts.forEach((context) => {
+                try {
+                    if (value) {
+                        context.suspend();
+                    } else if (context.state === "suspended") {
+                        context.resume();
+                    }
+                } catch (e) { }
+            });
+
+            try {
+                win.document.querySelectorAll("audio, video").forEach((element) => {
+                    element.muted = value;
+                });
+            } catch (e) { }
+        },
+
+        /**
+         * Ảnh chụp trạng thái âm thanh, dùng để kiểm tra nhanh khi debug.
+         */
+        report() {
+            let media = [];
+            try {
+                media = Array.from(win.document.querySelectorAll("audio, video")).map((el) => el.muted);
+            } catch (e) { }
+            return {
+                muted,
+                contexts: contexts.map((context) => context.state),
+                media
+            };
+        }
+    };
+}
+
+/**
+ * Nâng độ phân giải vẽ của game: báo devicePixelRatio cao hơn để engine
+ * (Phaser/Pixi/Cocos/Unity...) dựng canvas với backing store lớn hơn.
+ * Nhờ vậy phóng to khung máy vẫn nét thay vì bị kéo giãn ảnh.
+ * Phải cài trước khi game khởi tạo canvas nên mới cần watchFrame dò liên tục.
+ * @param {Window} win - window của iframe (cùng origin).
+ * @param {number} ratio - tỷ lệ vẽ mong muốn.
+ */
+function injectPixelRatio(win, ratio) {
+    if (!win || win.__devicePixelRatioPatched) {
+        return;
+    }
+    try {
+        Object.defineProperty(win, "devicePixelRatio", {
+            configurable: true,
+            get: () => ratio
+        });
+        win.__devicePixelRatioPatched = true;
+    } catch (e) { }
+}
+
+/**
+ * Lớp quản lý nút tắt/bật âm thanh của game trong iframe.
+ */
+class AudioControl {
+    constructor(button, device, storage) {
+        this.button = button;
+        this.device = device;
+        this.storage = storage;
+        this.muted = this.storage.getParameter("muted") === "true";
+
+        this.device.onFrameReady = () => this.apply();
+        this.device.watchFrame();
+        this.updateButton();
+        this.initEvents();
+    }
+
+    /**
+     * Đẩy trạng thái tắt/bật tiếng vào iframe.
+     */
+    apply() {
+        this.applyTo(this.device.getFrameWindow(), 0);
+    }
+
+    /**
+     * Cài cầu nối cho một window rồi đệ quy xuống các iframe con
+     * (nhiều playable nhét game trong iframe lồng thêm một tầng).
+     * @param {Window} win - window cần xử lý.
+     * @param {number} depth - độ sâu hiện tại, chặn ở 3 tầng cho an toàn.
+     */
+    applyTo(win, depth) {
+        if (!win || depth > 3) {
+            return;
+        }
+        try {
+            injectAudioBridge(win);
+            injectPixelRatio(win, AudioControl.RENDER_SCALE);
+
+            if (win.__deviceAudio && win.__deviceAudioState !== this.muted) {
+                win.__deviceAudio.set(this.muted);
+                win.__deviceAudioState = this.muted;
+            }
+
+            for (let i = 0; i < win.frames.length; i++) {
+                this.applyTo(win.frames[i], depth + 1);
+            }
+        } catch (e) { }
+    }
+
+    toggle() {
+        this.muted = !this.muted;
+        this.storage.setParameter("muted", this.muted);
+        this.updateButton();
+        this.apply();
+    }
+
+    updateButton() {
+        if (!this.button) {
+            return;
+        }
+        this.button.classList.toggle("_muted", this.muted);
+        this.button.title = this.muted ? "Unmute" : "Mute";
+    }
+
+    initEvents() {
+        if (this.button) {
+            this.button.addEventListener("click", () => this.toggle());
+        }
+    }
+}
+
 // Chạy mã sau khi trang đã tải xong
+// Độ phân giải vẽ ép cho game, để phóng to khung máy vẫn nét
+AudioControl.RENDER_SCALE = 2;
+
 window.addEventListener("load", () => {
     // Định nghĩa các loại màn hình
     const screenDefinitions = {
@@ -338,6 +807,7 @@ window.addEventListener("load", () => {
         "16_9": { title: "16:9", code: "md", ratio: 16 / 9 },
         "16_8": { title: "16:8", code: "lg", ratio: 2 },
         "X": { title: "19.5:9", code: "xlg", ratio: 19.5 / 9 },
+        "custom": { title: "Custom", code: "cst", ratio: 1, isCustom: true },
     };
 
     // Lấy các phần tử DOM container
@@ -347,6 +817,14 @@ window.addEventListener("load", () => {
         device: document.getElementById("device-container"),
         fullVersionLink: document.getElementById("fullVersion"),
         scaleInput: document.getElementById("scale"),
+        zoomValue: document.getElementById("zoomValue"),
+        customRatioW: document.getElementById("customRatioW"),
+        customRatioH: document.getElementById("customRatioH"),
+        deviceStyle: document.getElementById("device-style"),
+        rotateBtn: document.getElementById("rotateBtn"),
+        fullscreenBtn: document.getElementById("fullscreenBtn"),
+        exitFullscreenBtn: document.getElementById("exitFullscreen"),
+        muteBtn: document.getElementById("muteBtn"),
     };
 
     // Khởi tạo các module
@@ -354,6 +832,10 @@ window.addEventListener("load", () => {
         screen: "16_9",
         orientation: "l",
         screenScale: 80,
+        customRatioW: 16,
+        customRatioH: 9,
+        deviceStyle: "none",
+        rotated: false,
     });
     
     const navigation = new Navigation(screenDefinitions, storage);
@@ -363,6 +845,8 @@ window.addEventListener("load", () => {
     // Gắn các thành phần vào DOM
     domElements.navigation.append(navigation.element);
     domElements.orientation.append(orientationControl.element);
+    // Nút xoay đứng sau nút đổi hướng
+    domElements.orientation.append(domElements.rotateBtn);
 
     // Thiết lập trạng thái ban đầu
     navigation.changeSize();
@@ -371,9 +855,44 @@ window.addEventListener("load", () => {
     device.setPage();
     device.setScale();
     domElements.scaleInput.value = storage.getParameter("screenScale");
-    
+
+    // Chế độ toàn màn hình + tắt/bật âm thanh + kiểu khoét màn hình
+    new FullscreenControl(domElements.fullscreenBtn, domElements.exitFullscreenBtn, domElements.muteBtn);
+    new AudioControl(domElements.muteBtn, device, storage);
+    new DeviceStyleControl(domElements.deviceStyle, storage);
+    new RotateControl(domElements.rotateBtn, storage);
+
+    // Tỷ lệ tuỳ chỉnh: đổ giá trị đã lưu và chỉ hiện ô nhập khi tab Custom đang chọn
+    const syncCustomPanel = () => {
+        document.body.classList.toggle("custom-active", storage.getParameter("screen") === "custom");
+    };
+    domElements.customRatioW.value = Device.clampRatio(storage.getParameter("customRatioW"), 16);
+    domElements.customRatioH.value = Device.clampRatio(storage.getParameter("customRatioH"), 9);
+    syncCustomPanel();
+
+    const applyCustomRatio = () => {
+        const ratioW = Device.clampRatio(domElements.customRatioW.value, 16);
+        const ratioH = Device.clampRatio(domElements.customRatioH.value, 9);
+
+        domElements.customRatioW.value = ratioW;
+        domElements.customRatioH.value = ratioH;
+        storage.setParameter("customRatioW", ratioW);
+        storage.setParameter("customRatioH", ratioH);
+        device.resize();
+    };
+
+    [domElements.customRatioW, domElements.customRatioH].forEach(input => {
+        input.addEventListener("change", applyCustomRatio);
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                input.blur();
+            }
+        });
+    });
+
     // Gắn các event listener
     navigation.element.addEventListener("change", () => {
+        syncCustomPanel();
         device.resize();
     });
 
@@ -381,11 +900,18 @@ window.addEventListener("load", () => {
         device.resize();
     });
 
-    domElements.scaleInput.addEventListener("change", () => {
-        const scaleValue = parseInt(domElements.scaleInput.value, 10);
+    const applyScale = () => {
+        const scaleValue = Math.min(200, Math.max(40, parseInt(domElements.scaleInput.value, 10) || 80));
+        domElements.scaleInput.value = scaleValue;
         storage.setParameter("screenScale", scaleValue);
         device.setScale();
-    });
+        if (domElements.zoomValue) {
+            domElements.zoomValue.textContent = `${scaleValue}%`;
+        }
+    };
+    // input: kéo tới đâu phóng tới đó, không phải thả chuột mới đổi
+    domElements.scaleInput.addEventListener("input", applyScale);
+    applyScale();
     
     // Thêm loading khi click restart
     const restartBtn = document.querySelector(".navigation-restart");
@@ -400,6 +926,7 @@ window.addEventListener("load", () => {
                 device.iframe.src = "";
                 setTimeout(() => {
                     device.iframe.src = currentSrc;
+                    device.watchFrame();
                 }, 100);
             }
         });

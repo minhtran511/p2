@@ -553,3 +553,863 @@ body.dev.bigscreen .label {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+/* ==========================================================================
+   Custom size panel
+   ========================================================================== */
+#custom-size-container {
+    position: fixed;
+    z-index: 300;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    display: none;
+    text-align: center;
+}
+
+.custom-active #custom-size-container {
+    display: block;
+}
+
+#custom-size-container .title-section {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    top: auto;
+    margin: 0 0 6px;
+    color: #8122ff;
+}
+
+.custom-size-fields {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 4px 16px rgba(129, 34, 255, 0.18);
+}
+
+.custom-size-fields input {
+    width: 62px;
+    padding: 6px 8px;
+    font: inherit;
+    font-size: 13px;
+    text-align: center;
+    color: #4b1a8f;
+    background-color: #fff;
+    border: 1px solid rgba(129, 34, 255, 0.35);
+    border-radius: 8px;
+    outline: none;
+}
+
+.custom-size-fields input:focus {
+    border-color: #8122ff;
+    box-shadow: 0 0 0 3px rgba(129, 34, 255, 0.15);
+}
+
+.custom-size-x {
+    font-size: 13px;
+    color: #8122ff;
+}
+
+/* ==========================================================================
+   Fullscreen
+   ========================================================================== */
+#fullscreen-container {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    z-index: 300;
+}
+
+.fullscreen-btn,
+.exit-fullscreen-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #8122ff;
+    background-color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(129, 34, 255, 0.3);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.fullscreen-btn:hover,
+.exit-fullscreen-btn:hover {
+    color: #fff;
+    background-color: #8122ff;
+    box-shadow: 0 4px 16px rgba(129, 34, 255, 0.35);
+}
+
+.fullscreen-btn svg,
+.exit-fullscreen-btn svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+/* Nút thu nhỏ: nổi phía trên iframe, chỉ hiện khi đang fullscreen */
+.exit-fullscreen-btn {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 50%;
+    top: 12px;
+    transform: translateX(-50%);
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-color: rgba(255, 255, 255, 0.25);
+    opacity: 0.45;
+}
+
+.fullscreen-mode .exit-fullscreen-btn {
+    display: flex;
+}
+
+.exit-fullscreen-btn:hover {
+    opacity: 1;
+    background-color: #8122ff;
+    border-color: #8122ff;
+}
+
+/* Ẩn toàn bộ khung máy + các control, iframe tràn kín viewport */
+.fullscreen-mode #navigation-container,
+.fullscreen-mode #orientation-container,
+.fullscreen-mode #zoom-container,
+.fullscreen-mode #restart-container,
+.fullscreen-mode #custom-size-container,
+.fullscreen-mode #fullscreen-container,
+.fullscreen-mode .logo,
+.fullscreen-mode .back {
+    display: none !important;
+}
+
+.fullscreen-mode #device-container {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9000;
+    transform: none !important;
+    background-color: #000;
+}
+
+.fullscreen-mode #device {
+    position: static;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    transform: none;
+}
+
+.fullscreen-mode #device::after {
+    display: none !important;
+}
+
+.fullscreen-mode #screen {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+}
+
+.fullscreen-mode #screen::before,
+.fullscreen-mode #screen::after {
+    display: none !important;
+}
+
+.fullscreen-mode #iframe {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Chữ "Custom" dài hơn các tỷ lệ khác nên thu nhỏ lại cho vừa ô */
+.navigation-ratio[key="custom"] .navigation-title {
+    font-size: 11px;
+    letter-spacing: -0.2px;
+}
+
+/* ==========================================================================
+   Nút tắt/bật âm thanh
+   ========================================================================== */
+#fullscreen-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mute-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    color: #8122ff;
+    background-color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(129, 34, 255, 0.3);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.mute-btn:hover {
+    color: #fff;
+    background-color: #8122ff;
+    box-shadow: 0 4px 16px rgba(129, 34, 255, 0.35);
+}
+
+.mute-btn svg {
+    width: 17px;
+    height: 17px;
+}
+
+.mute-btn .icon-sound-off,
+.mute-btn._muted .icon-sound-on {
+    display: none;
+}
+
+.mute-btn._muted .icon-sound-off {
+    display: block;
+}
+
+.mute-btn._muted {
+    color: #fff;
+    background-color: #8122ff;
+    border-color: #8122ff;
+}
+
+/* Fullscreen: giấu nút phóng to nhưng giữ nút tiếng nổi trên iframe */
+.fullscreen-mode #fullscreen-container {
+    display: flex !important;
+    position: fixed;
+    right: 12px;
+    top: 12px;
+    z-index: 10000;
+}
+
+.fullscreen-mode .fullscreen-btn {
+    display: none;
+}
+
+.fullscreen-mode .mute-btn {
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-color: rgba(255, 255, 255, 0.25);
+    opacity: 0.45;
+}
+
+.fullscreen-mode .mute-btn:hover,
+.fullscreen-mode .mute-btn._muted {
+    opacity: 1;
+    background-color: #8122ff;
+    border-color: #8122ff;
+}
+
+/* Các ô ratio là inline-block: canh theo đỉnh để cỡ chữ khác nhau
+   (ví dụ ô Custom) không làm lệch hàng theo baseline */
+.navigation-item {
+    vertical-align: top;
+}
+
+/* Hàng ratio dài thêm vì có ô Custom -> đẩy nút đổi hướng ra xa cho thoáng
+   (chỉ ở chế độ ngang, chế độ dọc hai nhóm vốn đã tách nhau) */
+.orientation-l #orientation-container {
+    margin-left: 340px;
+}
+
+/* ==========================================================================
+   Kiểu khoét màn hình
+   ========================================================================== */
+#device-style-container {
+    position: absolute;
+    z-index: 300;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: -180px;
+    margin-left: 300px;
+    text-align: center;
+}
+
+/* Ngang: nhóm bên phải bị đẩy ra xa hơn, bám theo nút đổi hướng */
+.orientation-l #device-style-container {
+    margin-left: 340px;
+}
+
+#device-style-container .title-section {
+    position: relative;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    margin: 0 0 6px;
+    color: #8122ff;
+}
+
+/* Nhãn của nhóm này không cần dịch trái như các nhãn neo giữa màn hình */
+#device-style-container .title-section {
+    width: auto;
+    transform: none;
+}
+
+/* Ngang: hàng nút này nằm dưới điện thoại, canh giữa và song song hàng tỷ lệ ở trên */
+.orientation-l #device-style-container {
+    margin-left: 0;
+    margin-top: 230px;
+}
+
+/* ==========================================================================
+   Nút xoay máy 180°
+   ========================================================================== */
+.navigation-rotate {
+    position: relative;
+    display: inline-block;
+    margin-left: 8px;
+    color: #8224ff;
+}
+
+.navigation-rotate svg {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 24px;
+    height: 24px;
+    transform: translate(-50%, -50%);
+}
+
+/* Chỉ có ý nghĩa khi nằm ngang (dọc thì tai thỏ luôn ở trên) */
+.orientation-p .navigation-rotate {
+    display: none !important;
+}
+
+/* Màn ngang chỉ giữ một tai thỏ ở cạnh trái, bỏ cái thứ hai bên phải */
+.orientation-l #screen::after {
+    display: none !important;
+}
+
+
+/* ==========================================================================
+   Phần khoét màn hình
+   Mỗi kiểu chỉ khai báo 4 biến; hình học dọc/ngang/xoay dùng chung bên dưới.
+   --cut-long   : chiều dài chạy dọc theo cạnh máy
+   --cut-short  : độ sâu tính từ cạnh máy
+   --cut-inset  : khoảng cách từ cạnh máy (0 = dính cạnh)
+   --cut-side   : khoảng cách từ góc, dùng cho kiểu lệch trái/phải
+   ========================================================================== */
+.cutout {
+    position: absolute;
+    display: none;
+    z-index: 2000;
+    background-color: #000;
+    pointer-events: none;
+    width: var(--cut-long);
+    height: var(--cut-short);
+    border-radius: var(--cut-radius);
+}
+
+.has-cutout .cutout {
+    display: block;
+}
+
+/* --- Dọc: khoét ở cạnh trên --- */
+.cutout {
+    top: var(--cut-inset);
+}
+
+.cut-align-center .cutout {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.cut-align-start .cutout {
+    left: var(--cut-side);
+}
+
+.cut-align-end .cutout {
+    right: var(--cut-side);
+}
+
+/* --- Ngang: cạnh trên của máy nằm bên trái --- */
+.orientation-l .cutout {
+    top: auto;
+    left: var(--cut-inset);
+    width: var(--cut-short);
+    height: var(--cut-long);
+    border-radius: var(--cut-radius-l, var(--cut-radius));
+}
+
+.orientation-l.cut-align-center .cutout {
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.orientation-l.cut-align-start .cutout {
+    top: auto;
+    bottom: var(--cut-side);
+    transform: none;
+}
+
+.orientation-l.cut-align-end .cutout {
+    top: var(--cut-side);
+    bottom: auto;
+    transform: none;
+}
+
+/* --- Ngang + xoay 180°: cạnh trên của máy nằm bên phải --- */
+.orientation-l.rotated .cutout {
+    left: auto;
+    right: var(--cut-inset);
+    border-radius: var(--cut-radius-r, var(--cut-radius));
+}
+
+.orientation-l.rotated.cut-align-start .cutout {
+    bottom: auto;
+    top: var(--cut-side);
+}
+
+.orientation-l.rotated.cut-align-end .cutout {
+    top: auto;
+    bottom: var(--cut-side);
+}
+
+/* --- Thông số từng kiểu --- */
+.device-style-notch {
+    --cut-long: 148px;
+    --cut-short: 24px;
+    --cut-inset: 0px;
+    --cut-radius: 0 0 14px 14px;
+    --cut-radius-l: 0 14px 14px 0;
+    --cut-radius-r: 14px 0 0 14px;
+}
+
+.device-style-wide-notch {
+    --cut-long: 208px;
+    --cut-short: 30px;
+    --cut-inset: 0px;
+    --cut-radius: 0 0 18px 18px;
+    --cut-radius-l: 0 18px 18px 0;
+    --cut-radius-r: 18px 0 0 18px;
+}
+
+.device-style-teardrop {
+    --cut-long: 34px;
+    --cut-short: 26px;
+    --cut-inset: 0px;
+    --cut-radius: 0 0 999px 999px;
+    --cut-radius-l: 0 999px 999px 0;
+    --cut-radius-r: 999px 0 0 999px;
+}
+
+.device-style-island {
+    --cut-long: 104px;
+    --cut-short: 28px;
+    --cut-inset: 9px;
+    --cut-radius: 999px;
+}
+
+.device-style-pill-left,
+.device-style-pill-right {
+    --cut-long: 58px;
+    --cut-short: 20px;
+    --cut-inset: 11px;
+    --cut-side: 18px;
+    --cut-radius: 999px;
+}
+
+.device-style-punch,
+.device-style-punch-left,
+.device-style-punch-right {
+    --cut-long: 14px;
+    --cut-short: 14px;
+    --cut-inset: 10px;
+    --cut-side: 18px;
+    --cut-radius: 50%;
+}
+
+/* Đã có phần khoét riêng thì bỏ phần khoét mặc định của màn hình dài,
+   tránh chồng hai lớp (Standard vẫn giữ nguyên như cũ) */
+.has-cutout.bigscreen #screen::before,
+.has-cutout.bigscreen #screen::after {
+    display: none !important;
+}
+
+/* ==========================================================================
+   Nút chọn kiểu màn hình: cùng cỡ nút tỷ lệ, bên trong vẽ một máy thu nhỏ
+   ========================================================================== */
+#device-style {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+/* Dọc: xếp thành lưới 3 cột cho khỏi dài lê thê */
+.orientation-p #device-style {
+    width: 204px;
+    white-space: normal;
+    font-size: 0;
+}
+
+.orientation-p .navigation-style {
+    display: inline-block !important;
+}
+
+.navigation-style {
+    position: relative;
+}
+
+.style-preview {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 26px;
+    height: 40px;
+    transform: translate(-50%, -50%);
+    border: 2px solid currentColor;
+    border-radius: 6px;
+}
+
+.style-preview::before {
+    position: absolute;
+    left: 50%;
+    display: block;
+    content: "";
+    transform: translateX(-50%);
+    background-color: currentColor;
+}
+
+.navigation-style[key="none"] .style-preview::before {
+    display: none;
+}
+
+.navigation-style[key="notch"] .style-preview::before {
+    top: 0;
+    width: 12px;
+    height: 4px;
+    border-radius: 0 0 2px 2px;
+}
+
+.navigation-style[key="wide-notch"] .style-preview::before {
+    top: 0;
+    width: 17px;
+    height: 5px;
+    border-radius: 0 0 3px 3px;
+}
+
+.navigation-style[key="teardrop"] .style-preview::before {
+    top: 0;
+    width: 6px;
+    height: 5px;
+    border-radius: 0 0 999px 999px;
+}
+
+.navigation-style[key="island"] .style-preview::before {
+    top: 3px;
+    width: 10px;
+    height: 4px;
+    border-radius: 999px;
+}
+
+.navigation-style[key="punch"] .style-preview::before {
+    top: 3px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+}
+
+.navigation-style[key="punch-left"] .style-preview::before {
+    top: 3px;
+    left: 4px;
+    width: 4px;
+    height: 4px;
+    transform: none;
+    border-radius: 50%;
+}
+
+.navigation-style[key="punch-right"] .style-preview::before {
+    top: 3px;
+    left: auto;
+    right: 4px;
+    width: 4px;
+    height: 4px;
+    transform: none;
+    border-radius: 50%;
+}
+
+.navigation-style[key="pill-left"] .style-preview::before {
+    top: 3px;
+    left: 3px;
+    width: 10px;
+    height: 5px;
+    transform: none;
+    border-radius: 999px;
+}
+
+.navigation-style[key="pill-right"] .style-preview::before {
+    top: 3px;
+    left: auto;
+    right: 3px;
+    width: 10px;
+    height: 5px;
+    transform: none;
+    border-radius: 999px;
+}
+
+/* Ngang: tách hai nhóm ra xa nhau một chút, vẫn quanh trục giữa */
+.orientation-l #navigation-container {
+    margin-left: -40px;
+}
+
+.orientation-l #orientation-container {
+    margin-left: 410px;
+}
+
+/* ==========================================================================
+   Bảng điều khiển gom về một chỗ (bên trái), thiết bị dịch sang phải
+   Ghi đè toàn bộ định vị tuyệt đối cũ của từng nhóm.
+   ========================================================================== */
+#control-panel {
+    position: fixed;
+    z-index: 300;
+    left: 30%;
+    top: 50%;
+    width: 268px;
+    padding: 20px;
+    transform: translate(-50%, -50%);
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(129, 34, 255, 0.18);
+    box-shadow: 0 12px 40px rgba(108, 74, 182, 0.12);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    transition: opacity 0.3s 0.3s;
+}
+
+._show-all #control-panel {
+    opacity: 1;
+}
+
+#control-panel > * {
+    position: static !important;
+    width: auto !important;
+    margin: 0 0 16px !important;
+    transform: none !important;
+    text-align: left;
+}
+
+#control-panel > *:last-child {
+    margin-bottom: 0 !important;
+}
+
+#control-panel .title-section {
+    position: static !important;
+    width: auto !important;
+    margin: 0 0 6px !important;
+    transform: none !important;
+    text-align: left;
+    color: #8122ff;
+    font-size: 11px;
+}
+
+/* Nút bấm trong bảng: luôn xếp thành lưới, không phụ thuộc hướng máy */
+#control-panel .navigation-item {
+    display: inline-block !important;
+    width: 52px;
+    height: 52px;
+    margin: 0 4px 4px 0 !important;
+    line-height: 52px;
+}
+
+#control-panel .navigation-title,
+#control-panel .navigation-code {
+    line-height: normal;
+}
+
+#control-panel #navigation,
+#control-panel #device-style {
+    display: block;
+    width: auto;
+    white-space: normal;
+    font-size: 0;
+}
+
+#control-panel #orientation-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+#control-panel #orientation-container .title-section {
+    flex: 0 0 100%;
+}
+
+#control-panel #orientation {
+    display: inline-block;
+    width: 52px;
+    height: 52px;
+    margin: 0 4px 0 0;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(129, 34, 255, 0.4);
+    cursor: pointer;
+}
+
+#control-panel #orientation .portrait-icon,
+#control-panel #orientation .landscape-icon {
+    width: 46px;
+    height: 46px;
+    left: 50%;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    margin: 0;
+    transform: translate(-50%, -50%);
+}
+
+#control-panel .style-preview {
+    width: 22px;
+    height: 34px;
+}
+
+/* Thanh zoom */
+#control-panel #zoom-container input[type="range"] {
+    width: 100%;
+    margin: 6px 0 0;
+}
+
+/* Hàng nút restart / tiếng / fullscreen */
+#actions-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(129, 34, 255, 0.18);
+}
+
+#actions-container .navigation-restart {
+    position: relative;   /* để icon ::after bám vào nút, không văng ra giữa bảng */
+    width: 36px !important;
+    height: 36px !important;
+    margin: 0 !important;
+    flex-shrink: 0;
+}
+
+#actions-container .mute-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+}
+
+#actions-container .fullscreen-btn {
+    flex: 1;
+    justify-content: center;
+    height: 36px;
+    padding: 0 10px;
+}
+
+/* Thiết bị dịch sang phải, chừa chỗ cho bảng điều khiển */
+#device-container {
+    left: 30%;
+    width: 70%;
+}
+
+.fullscreen-mode #control-panel {
+    display: none !important;
+}
+
+.fullscreen-mode #device-container {
+    left: 0;
+    width: 100%;
+}
+
+/* Logo về lại góc trái dưới (bảng điều khiển canh giữa nên góc này trống)
+   và nâng lớp để không bị khung máy đè lên khi zoom lớn */
+.logo {
+    left: 14px;
+    right: auto;
+    z-index: 310;
+}
+
+@media (max-width: 1200px) {
+    #control-panel {
+        width: 240px;
+        padding: 14px;
+    }
+}
+
+/* Fullscreen: bỏ mọi phần khoét màn hình, chỉ còn game */
+.fullscreen-mode .cutout {
+    display: none !important;
+}
+
+/* Nút tiếng được JS đưa ra ngoài body khi fullscreen -> neo góc phải trên */
+.fullscreen-mode > .mute-btn {
+    position: fixed;
+    z-index: 10000;
+    right: 12px;
+    top: 12px;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-color: rgba(255, 255, 255, 0.25);
+    opacity: 0.45;
+}
+
+.fullscreen-mode > .mute-btn:hover,
+.fullscreen-mode > .mute-btn._muted {
+    opacity: 1;
+    background-color: #8122ff;
+    border-color: #8122ff;
+}
+
+/* Thanh điều khiển nổi khi fullscreen: nút tiếng đứng cạnh nút thu nhỏ */
+#fs-controls {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 50%;
+    top: 12px;
+    align-items: center;
+    gap: 8px;
+    transform: translateX(-50%);
+}
+
+.fullscreen-mode #fs-controls {
+    display: flex;
+}
+
+#fs-controls .exit-fullscreen-btn {
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
+    display: flex;
+}
+
+#fs-controls .mute-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-color: rgba(255, 255, 255, 0.25);
+    opacity: 0.45;
+}
+
+#fs-controls .mute-btn:hover,
+#fs-controls .mute-btn._muted {
+    opacity: 1;
+    background-color: #8122ff;
+    border-color: #8122ff;
+}

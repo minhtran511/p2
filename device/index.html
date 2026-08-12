@@ -13,24 +13,81 @@
 <body>
     <span class="back"><span class="square square-0"></span>
         <span class="square square-1"></span> <span class="square square-2"></span></span>
-    <nav id="navigation-container">
-        <div class="title-section display-l">screen ratio:</div>
-        <div class="title-section display-p">screen<br />ratio:</div>
-    </nav>
-    <nav id="orientation-container">
-        <div class="title-section">orientation:</div>
-    </nav>
+
+    <!-- Toàn bộ điều khiển gom vào một bảng bên trái -->
+    <aside id="control-panel">
+        <nav id="navigation-container">
+            <div class="title-section">screen ratio:</div>
+        </nav>
+
+        <!-- Nhập tỷ lệ tuỳ chỉnh, chỉ hiện khi chọn tab Custom -->
+        <div id="custom-size-container">
+            <div class="title-section">custom ratio:</div>
+            <div class="custom-size-fields">
+                <input type="number" id="customRatioW" min="1" max="32" step="0.5" aria-label="Ratio width" />
+                <span class="custom-size-x">:</span>
+                <input type="number" id="customRatioH" min="1" max="32" step="0.5" aria-label="Ratio height" />
+            </div>
+        </div>
+
+        <!-- Kiểu khoét màn hình, các nút sinh từ DeviceStyleControl.STYLES -->
+        <div id="device-style-container">
+            <div class="title-section">screen:</div>
+            <div id="device-style"></div>
+        </div>
+
+        <nav id="orientation-container">
+            <div class="title-section">orientation:</div>
+            <!-- Xoay máy 180°: đổi bên đặt tai thỏ, khung máy giữ nguyên -->
+            <div class="navigation-item navigation-rotate" id="rotateBtn" title="Rotate device">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                    <polyline points="21 3 21 9 15 9"></polyline>
+                </svg>
+            </div>
+        </nav>
+
+        <div id="zoom-container">
+            <div class="title-section">zoom: <span id="zoomValue">80%</span></div>
+            <input type="range" min="40" max="200" step="10" value="80" id="scale" />
+        </div>
+
+        <div id="actions-container">
+            <a href="" class="navigation-item navigation-alt navigation-restart" title="Restart game"></a>
+            <button type="button" id="muteBtn" class="mute-btn" title="Mute">
+                <svg class="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 5 6 9H2v6h4l5 4V5z"></path>
+                    <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"></path>
+                </svg>
+                <svg class="icon-sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 5 6 9H2v6h4l5 4V5z"></path>
+                    <path d="M22 9l-6 6M16 9l6 6"></path>
+                </svg>
+            </button>
+            <button type="button" id="fullscreenBtn" class="fullscreen-btn" title="Fullscreen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M16 21h3a2 2 0 0 0 2-2v-3M8 21H5a2 2 0 0 1-2-2v-3"></path>
+                </svg>
+                <span>Fullscreen</span>
+            </button>
+        </div>
+    </aside>
+
     <section id="device-container"></section>
-    <div id="zoom-container">
-        <div class="title-section">Zoom:</div>
-        <input type="range" min="40" max="100" step="20" value="80" id="scale" />
+
+    <!-- Thanh nổi phía trên iframe khi đang fullscreen (nút tiếng được JS đưa vào đây) -->
+    <div id="fs-controls">
+        <button type="button" id="exitFullscreen" class="exit-fullscreen-btn" title="Exit fullscreen (Esc)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3M16 3v3a2 2 0 0 0 2 2h3M16 21v-3a2 2 0 0 1 2-2h3M8 21v-3a2 2 0 0 0-2-2H3"></path>
+            </svg>
+            <span>Exit fullscreen</span>
+        </button>
     </div>
-    <div id="restart-container">
-        <a href="" class="navigation-item navigation-alt navigation-restart"></a>
-    </div>
+
     <a href="https://playable.minhtq.dev/" target="_blank" class="logo"></a>
     <a id="fullVersion" class="fullVersion">full screen mode</a>
-    
+
     <!-- Loading overlay -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="loading-content">

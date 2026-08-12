@@ -290,97 +290,10 @@ class GameListManager {
                 // Phát hiện mobile device
                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-                if (isMobile) {
-                    // Mobile: mở game trực tiếp
-                    window.open(directUrl, '_blank');
-                } else {
-                    // Desktop: hiển thị modal với 2 options
-                    this.showOptionsModal(deviceUrl, directUrl, item.textContent);
-                }
+                // Mobile mở game trực tiếp, desktop mở luôn trình giả lập device
+                window.open(isMobile ? directUrl : deviceUrl, '_blank');
             });
         });
-    }
-
-    /**
-     * Hiển thị modal với 2 options cho desktop
-     */
-    showOptionsModal(deviceUrl, directUrl, version) {
-        // Tạo modal
-        const modal = document.createElement('div');
-        modal.className = 'options-modal';
-        modal.innerHTML = `
-            <div class="modal-content" role="dialog" aria-modal="true">
-                <div class="modal-header">
-                    <div>
-                        <h3>Open ${version.toUpperCase()}</h3>
-                        <p>Choose how you want to preview this build</p>
-                    </div>
-                    <button class="modal-close" type="button" aria-label="Close">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <button class="option-btn device-option" type="button" data-url="${deviceUrl}">
-                        <span class="option-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="6" y="2" width="12" height="20" rx="2"></rect>
-                                <line x1="11" y1="18" x2="13" y2="18"></line>
-                            </svg>
-                        </span>
-                        <span class="option-text">
-                            <strong>Device Preview</strong>
-                            <small>View in mobile simulator</small>
-                        </span>
-                    </button>
-                    <button class="option-btn direct-option" type="button" data-url="${directUrl}">
-                        <span class="option-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="6 3 20 12 6 21 6 3"></polygon>
-                            </svg>
-                        </span>
-                        <span class="option-text">
-                            <strong>Play Direct</strong>
-                            <small>Open game directly</small>
-                        </span>
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Event listeners cho modal
-        modal.querySelector('.modal-close').addEventListener('click', () => {
-            document.body.removeChild(modal);
-        });
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                document.body.removeChild(modal);
-            }
-        });
-
-        // Đóng modal bằng phím Esc
-        const onKeyDown = (e) => {
-            if (e.key === 'Escape' && modal.parentNode) {
-                document.body.removeChild(modal);
-            }
-        };
-        document.addEventListener('keydown', onKeyDown);
-        new MutationObserver((mutations, observer) => {
-            if (!modal.parentNode) {
-                document.removeEventListener('keydown', onKeyDown);
-                observer.disconnect();
-            }
-        }).observe(document.body, { childList: true });
-
-        modal.querySelectorAll('.option-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                window.open(btn.dataset.url, '_blank');
-                document.body.removeChild(modal);
-            });
-        });
-
-        // Show modal với animation
-        setTimeout(() => modal.classList.add('show'), 10);
     }
 
     /**
