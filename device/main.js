@@ -96,11 +96,33 @@ class Device {
 
     /**
      * Phân tích URL hiện tại để lấy tham số 'page'.
+     * Tham số được cất vào sessionStorage rồi xoá khỏi thanh địa chỉ,
+     * nên URL hiển thị chỉ còn `/device/` (F5 vẫn giữ nguyên game đang xem).
      * @returns {string} URL của trang để tải trong iframe.
      */
     getPage() {
         const searchParams = new URLSearchParams(window.location.search);
         let page = searchParams.get("page");
+        let lang = searchParams.get("lang");
+
+        if (page) {
+            // Lần đầu vào trang: nhớ tham số rồi dọn URL
+            try {
+                sessionStorage.setItem("devicePage", page);
+                if (lang) {
+                    sessionStorage.setItem("deviceLang", lang);
+                } else {
+                    sessionStorage.removeItem("deviceLang");
+                }
+            } catch (e) { }
+            window.history.replaceState({}, "", window.location.pathname);
+        } else {
+            // URL đã được dọn (hoặc user F5): lấy lại tham số đã nhớ
+            try {
+                page = sessionStorage.getItem("devicePage");
+                lang = sessionStorage.getItem("deviceLang");
+            } catch (e) { }
+        }
 
         // Cung cấp trang mặc định khi chạy trên localhost
         if (!page && window.location.host.includes("localhost")) {
@@ -109,7 +131,6 @@ class Device {
 
         if (page) {
             const hash = Math.floor(Math.random() * 10000);
-            const lang = searchParams.get("lang");
             let url = `${page}?hash=${hash}`;
             if (lang) {
                 url = `${url}&lang=${lang}`;

@@ -3,46 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title>Playable List - minhtq.dev</title>
+    <link rel="icon" id="favicon" href="data:,">
     <link rel="stylesheet" href="style.css">
+    <script>
+        // Áp dụng theme trước khi render để tránh nhấp nháy
+        (function () {
+            try {
+                const stored = localStorage.getItem('theme');
+                const dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.classList.toggle('dark', dark);
+            } catch (e) { }
+        })();
+    </script>
     <script disable-devtool-auto src='https://cdn.jsdelivr.net/npm/disable-devtool'></script>
 </head>
 <body>
-    <div class="background">
-        <span class="square square-0"></span>
-        <span class="square square-1"></span>
-        <span class="square square-2"></span>
-    </div>
+    <header class="topbar">
+        <div class="container topbar-inner">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">
+                    <!-- Logo lấy từ APP_CONFIG.logo trong config.js -->
+                    <img id="brandLogo" alt="" hidden>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-title" id="headerTitle">Game Library</span>
+                    <span class="brand-subtitle" id="headerSubtitle">Collection of Playable Ads Games</span>
+                </div>
+            </div>
 
-    <header class="header">
-        <div class="header-content">
-            <h1 class="header-title">Game Library</h1>
-            <p class="header-subtitle">Collection of Playable Ads Games</p>
+            <button class="btn-icon" id="themeToggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                </svg>
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
         </div>
     </header>
 
-    <main class="main-content">
-        <div class="filters-section">
+    <main class="container main-content">
+        <!-- Stat cards được render từ config.js -->
+        <section class="stats" id="headerStats"></section>
+
+        <section class="toolbar">
             <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search games..." class="search-input">
-                <div class="search-icon">🔍</div>
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Search games..." class="search-input" autocomplete="off">
             </div>
-            
-            <div class="category-filters">
-                <button class="filter-btn active" data-category="all">All</button>
-                <button class="filter-btn" data-category="action">Action</button>
-                <button class="filter-btn" data-category="casual">Casual</button>
-                <button class="filter-btn" data-category="puzzle">Puzzle</button>
-                <button class="filter-btn" data-category="music">Music</button>
-                <button class="filter-btn" data-category="merge">Merge</button>
-                <button class="filter-btn" data-category="cooking">Cooking</button>
-                <button class="filter-btn" data-category="simulation">Simulation</button>
-                <button class="filter-btn" data-category="shooting">Shooting</button>
-                <button class="filter-btn" data-category="race">Race</button>
-                <button class="filter-btn" data-category="card">Card</button>
-                <button class="filter-btn" data-category="midcore">Midcore</button>
-            </div>
-        </div>
+
+            <!-- Tabs được sinh tự động từ APP_CONFIG.categories trong config.js -->
+            <div class="category-filters" id="categoryFilters"></div>
+        </section>
+
+        <p class="result-count" id="resultCount"></p>
 
         <div class="games-grid" id="gamesGrid">
             <!-- Games sẽ được load bằng JavaScript -->
@@ -54,18 +74,24 @@
         </div>
 
         <div class="no-results" id="noResults" style="display: none;">
-            <div class="no-results-icon">🎮</div>
+            <div class="no-results-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+                </svg>
+            </div>
             <h3>No games found</h3>
             <p>Try searching with different keywords or select another category</p>
         </div>
     </main>
 
     <footer class="footer">
-        <div class="footer-content">
-            <p>Playable Ads Preview - minhtq.dev</p>
+        <div class="container footer-content">
+            <p>Playable Ads Preview — minhtq.dev</p>
         </div>
     </footer>
 
+    <script src="config.js"></script>
     <script src="script.js"></script>
     <script>
         (function () {
