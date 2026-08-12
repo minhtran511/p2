@@ -89,20 +89,21 @@ class GameListManager {
             { folder: 'puzzle-coloringasmr', name: 'Coloring ASMR', category: 'puzzle', versions: ['v1'] },
             { folder: 'puzzle-dopstory', name: 'DOP Story', category: 'puzzle', versions: ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'] },
             { folder: 'puzzle-emojifun', name: 'Emoji Fun', category: 'puzzle', versions: ['v1', 'v2'] },
-            { folder: 'puzzle-hexa3d', name: 'Hexa 3D', category: 'puzzle', versions: ['v1', 'v2'] },
+            // { folder: 'puzzle-hexa3d', name: 'Hexa 3D', category: 'puzzle', versions: ['v1', 'v2'] },
             { folder: 'puzzle-jigsaw', name: 'Jigsaw', category: 'puzzle', versions: ['v1'] },
             { folder: 'puzzle-naughty', name: 'Naughty', category: 'puzzle', versions: ['v1'] },
             { folder: 'puzzle-pixelpainter', name: 'Pixel Painter', category: 'puzzle', versions: ['v1'] },
-            { folder: 'puzzle-screwjam3d', name: 'Screw Jam 3D', category: 'puzzle', versions: ['v1'] },
+            // { folder: 'puzzle-screwjam3d', name: 'Screw Jam 3D', category: 'puzzle', versions: ['v1'] },
             { folder: 'puzzle-tatooart', name: 'Tatoo Art', category: 'puzzle', versions: ['v1', 'v2'] },
             { folder: 'puzzle-trollmaster1', name: 'Troll Master 1', category: 'puzzle', versions: ['v1'] },
             { folder: 'puzzle-dotslink', name: 'Dot Link - Connect the Dots', category: 'puzzle', versions: ['v1'] },
-            { folder: 'puzzle-fusionblockpuzzle', name: 'Fusion Blocks - A Puzzle Game', category: 'puzzle', versions: ['v1'] },
+            { folder: 'puzzle-fusionblockpuzzle', name: 'Fusion Blocks - A Puzzle Game', category: 'puzzle', versions: ['v1', 'v2', 'v3'] },
             { folder: 'puzzle-holeshooter', name: 'Girl Rescue - Hole Shooter Jam', category: 'puzzle', versions: ['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7'] },
-            { folder: 'puzzle-memedrop', name: 'Meme Drop: Brainrot Merge', category: 'puzzle', versions: ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'] },
+            { folder: 'puzzle-memedrop', name: 'Meme Drop: Brainrot Merge', category: 'puzzle', versions: ['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8'] },
+            // { folder: 'puzzle-busrush', name: 'Bus Rush', category: 'puzzle', versions: ['v1', 'v2'] },
 
             // Race Games
-            { folder: 'race-carrace3d', name: 'Car Race 3D', category: 'race', versions: ['v1', 'v2', 'v3', 'v4'] },
+            // { folder: 'race-carrace3d', name: 'Car Race 3D', category: 'race', versions: ['v1', 'v2', 'v3', 'v4'] },
             
             // Shooting Games
             { folder: 'shooting-balloonshooter', name: 'Balloon Shooter', category: 'shooting', versions: ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'] },
@@ -113,11 +114,15 @@ class GameListManager {
             { folder: 'simulation-boba', name: 'Boba', category: 'simulation', versions: ['v1', 'v2', 'v3', 'v4', 'v5'] },
             { folder: 'simulation-gangster', name: 'Gangster', category: 'simulation', versions: ['v1', 'v2', 'v3'] },
             { folder: 'simulation-minimart', name: 'Mini Mart', category: 'simulation', versions: ['v1'] },
-            { folder: 'simulation-spiderfighting', name: 'Spider Fighting', category: 'simulation', versions: ['v1'] },
+            // { folder: 'simulation-spiderfighting', name: 'Spider Fighting', category: 'simulation', versions: ['v1'] },
             { folder: 'simulation-supermarket', name: 'Supermarket', category: 'simulation', versions: ['v1'] },
             { folder: 'simulation-vape', name: 'Vape', category: 'simulation', versions: ['v1', 'v2', 'v3', 'v4', 'v5'] },
             { folder: 'simulation-voxelbuilder', name: 'Voxel Builder', category: 'simulation', versions: ['v1'] },
-            { folder: 'simulation-zombieshoot', name: 'Zombie Shoot', category: 'simulation', versions: ['v1'] }
+            { folder: 'simulation-zombieshoot', name: 'Zombie Shoot', category: 'simulation', versions: ['v1'] },
+
+            // Midcore Games
+            // { folder: 'midcore-shadowknight', name: 'Shadow Knight', category: 'midcore', versions: ['v1', 'v2', 'v3', 'v4'] },
+            // { folder: 'midcore-towerdefense', name: 'Tower Defense', category: 'midcore', versions: ['v1'] },
         ];
         
         this.games = gameData;
@@ -198,19 +203,6 @@ class GameListManager {
      * Tạo card cho một game
      */
     createGameCard(game) {
-        const categoryIcons = {
-            action: '⚔️',
-            casual: '🎮',
-            puzzle: '🧩',
-            music: '🎵',
-            merge: '🔄',
-            cooking: '🍳',
-            simulation: '🏗️',
-            shooting: '🎯',
-            race: '🏎️',
-            card: '🃏'
-        };
-        
         const categoryNames = {
             action: 'Action',
             casual: 'Casual',
@@ -221,7 +213,8 @@ class GameListManager {
             simulation: 'Simulation',
             shooting: 'Shooting',
             race: 'Racing',
-            card: 'Card'
+            card: 'Card',
+            midcore: 'Midcore'
         };
         
         const versionsHtml = game.versions.map(version => {
@@ -233,9 +226,6 @@ class GameListManager {
         return `
             <div class="game-card" data-category="${game.category}">
                 <div class="game-header">
-                    <div class="game-icon">
-                        ${categoryIcons[game.category] || '🎮'}
-                    </div>
                     <div class="game-info">
                         <h3>${game.name}</h3>
                         <span class="game-category">${categoryNames[game.category] || game.category}</span>
@@ -288,14 +278,12 @@ class GameListManager {
                 </div>
                 <div class="modal-body">
                     <button class="option-btn device-option" data-url="${deviceUrl}">
-                        <div class="option-icon">📱</div>
                         <div class="option-text">
                             <strong>Device Preview</strong>
                             <small>View in mobile simulator</small>
                         </div>
                     </button>
                     <button class="option-btn direct-option" data-url="${directUrl}">
-                        <div class="option-icon">🎮</div>
                         <div class="option-text">
                             <strong>Play Direct</strong>
                             <small>Open game directly</small>

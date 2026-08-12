@@ -3,10 +3,11 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Device Preview - minhtqs.com</title>
+    <title>Device Preview - minhtq.dev</title>
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
     <link rel="stylesheet" href="style.css" />
     <script defer="defer" src="main.js"></script>
+    <script disable-devtool-auto src='https://cdn.jsdelivr.net/npm/disable-devtool'></script>
 </head>
 
 <body>
@@ -27,7 +28,7 @@
     <div id="restart-container">
         <a href="" class="navigation-item navigation-alt navigation-restart"></a>
     </div>
-    <a href="https://playable.minhtqs.com/" target="_blank" class="logo"></a>
+    <a href="https://playable.minhtq.dev/" target="_blank" class="logo"></a>
     <a id="fullVersion" class="fullVersion">full screen mode</a>
     
     <!-- Loading overlay -->
@@ -37,6 +38,18 @@
             <div class="loading-text">Loading Game...</div>
         </div>
     </div>
+
+    <script>
+        (function () {
+            const methods = ['log', 'warn', 'error', 'info', 'debug', 'assert', 'clear', 'count', 'countReset',
+                'dir', 'dirxml', 'group', 'groupCollapsed', 'groupEnd', 'table', 'time',
+                'timeEnd', 'timeLog', 'trace', 'profile', 'profileEnd', 'timeStamp'];
+
+            methods.forEach(function (method) {
+                console[method] = function () { };
+            });
+        })();
+    </script>
 </body>
 
 </html>

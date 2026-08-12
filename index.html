@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Playable List - minhtqs.com</title>
+    <title>Playable List - minhtq.dev</title>
     <link rel="stylesheet" href="style.css">
+    <script disable-devtool-auto src='https://cdn.jsdelivr.net/npm/disable-devtool'></script>
 </head>
 <body>
     <div class="background">
@@ -39,6 +40,7 @@
                 <button class="filter-btn" data-category="shooting">Shooting</button>
                 <button class="filter-btn" data-category="race">Race</button>
                 <button class="filter-btn" data-category="card">Card</button>
+                <button class="filter-btn" data-category="midcore">Midcore</button>
             </div>
         </div>
 
@@ -60,10 +62,21 @@
 
     <footer class="footer">
         <div class="footer-content">
-            <p>Playable Ads Preview - minhtqs.com</p>
+            <p>Playable Ads Preview - minhtq.dev</p>
         </div>
     </footer>
 
     <script src="script.js"></script>
+    <script>
+        (function () {
+            const methods = ['log', 'warn', 'error', 'info', 'debug', 'assert', 'clear', 'count', 'countReset',
+                'dir', 'dirxml', 'group', 'groupCollapsed', 'groupEnd', 'table', 'time',
+                'timeEnd', 'timeLog', 'trace', 'profile', 'profileEnd', 'timeStamp'];
+
+            methods.forEach(function (method) {
+                console[method] = function () { };
+            });
+        })();
+    </script>
 </body>
 </html>
