@@ -203,6 +203,20 @@ class GameListManager {
      * Tạo card cho một game
      */
     createGameCard(game) {
+        const categoryIcons = {
+            action: '🎮',
+            casual: '🎮',
+            puzzle: '🎮',
+            music: '🎮',
+            merge: '🎮',
+            cooking: '🎮',
+            simulation: '🎮',
+            shooting: '🎮',
+            race: '🎮',
+            card: '🎮',
+            midcore: '🎮'
+        };
+
         const categoryNames = {
             action: 'Action',
             casual: 'Casual',
@@ -226,6 +240,9 @@ class GameListManager {
         return `
             <div class="game-card" data-category="${game.category}">
                 <div class="game-header">
+                    <div class="game-icon">
+                        ${categoryIcons[game.category] || '🎮'}
+                    </div>
                     <div class="game-info">
                         <h3>${game.name}</h3>
                         <span class="game-category">${categoryNames[game.category] || game.category}</span>
@@ -278,12 +295,14 @@ class GameListManager {
                 </div>
                 <div class="modal-body">
                     <button class="option-btn device-option" data-url="${deviceUrl}">
+                        <div class="option-icon">📱</div>
                         <div class="option-text">
                             <strong>Device Preview</strong>
                             <small>View in mobile simulator</small>
                         </div>
                     </button>
                     <button class="option-btn direct-option" data-url="${directUrl}">
+                        <div class="option-icon">🎮</div>
                         <div class="option-text">
                             <strong>Play Direct</strong>
                             <small>Open game directly</small>
