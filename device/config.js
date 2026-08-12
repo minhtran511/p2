@@ -16,11 +16,11 @@ const DEVICE_CONFIG = {
     },
 
     /**
-     * Rendering resolution forced on the game (fake devicePixelRatio).
-     * Keep it >= the maximum zoom level (3 matches 300%) so zooming stays sharp.
-     * Higher values cost more GPU time - drop to 2 if a game stutters.
+     * Extra sharpness multiplier on top of the screen's own pixel ratio.
+     * 1 already renders 1:1 with the physical pixels because the device frame is
+     * built at its real size; raise it only if you want supersampling.
      */
-    renderScale: 3,
+    renderScale: 1,
 
     /**
      * Default corner radius of the phone frame, in pixels.

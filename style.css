@@ -461,8 +461,10 @@ svg {
 /* ------------------------- Middle: device frame ------------------------- */
 .stage {
     position: relative;
-    overflow: hidden;
+    overflow: auto;
     background: hsl(var(--canvas));
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
 }
 
 #device-container {
@@ -474,6 +476,10 @@ svg {
     display: flex;
     align-items: center;
     justify-content: center;
+    /* The frame grows with zoom, so let it push out and scroll instead of clipping */
+    min-width: min-content;
+    min-height: min-content;
+    padding: 16px;
 }
 
 #device {
@@ -483,8 +489,8 @@ svg {
     padding: 0;
     font-size: 0;
     line-height: 0;
-    border: 8px solid #111114;
-    border-radius: var(--device-radius, 26px);
+    border: calc(8px * var(--device-zoom, 1)) solid #111114;
+    border-radius: calc(var(--device-radius, 26px) * var(--device-zoom, 1));
     background: #111114;
     box-shadow: var(--shadow-lg);
 }
@@ -497,8 +503,8 @@ svg {
     position: relative;
     z-index: 10;
     overflow: hidden;
-    /* Follows the bezel: outer radius minus the 8px border */
-    border-radius: max(0px, calc(var(--device-radius, 26px) - 8px));
+    /* Follows the bezel: outer radius minus the border, both scaled with zoom */
+    border-radius: max(0px, calc((var(--device-radius, 26px) - 8px) * var(--device-zoom, 1)));
     background: #000;
 }
 
@@ -525,18 +531,31 @@ svg {
 }
 
 .stage-empty h3 {
-    font-size: 14px;
+    font-size: calc(14px * var(--device-zoom, 1));
     font-weight: 600;
     color: rgba(255, 255, 255, 0.9);
     margin-bottom: 4px;
 }
 
 .stage-empty p {
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--device-zoom, 1));
 }
 
 body.has-game .stage-empty {
     display: none;
+}
+
+/* Overlay layer: laid out at the unzoomed device size, then scaled up with the
+   frame so the notch, home bar, toast and loader keep their proportions */
+.screen-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: calc(100% / var(--device-zoom, 1));
+    height: calc(100% / var(--device-zoom, 1));
+    transform: scale(var(--device-zoom, 1));
+    transform-origin: top left;
+    pointer-events: none;
 }
 
 /* Screen cutouts */

@@ -64,25 +64,32 @@ class Device {
         this.iframe.setAttribute("allow", "autoplay");
         this.screen.append(this.iframe);
 
+        // Everything drawn on top of the game lives in one layer that is scaled
+        // with the zoom level, so the notch, home bar, toast and loader keep their
+        // proportions instead of staying tiny when the frame grows.
+        this.overlay = document.createElement("div");
+        this.overlay.className = "screen-overlay";
+        this.screen.append(this.overlay);
+
         // Screen cutout (notch / island / punch hole)
         this.cutout = document.createElement("span");
         this.cutout.className = "cutout";
-        this.screen.append(this.cutout);
+        this.overlay.append(this.cutout);
 
         // iPhone-style home indicator bar
         this.homeBar = document.createElement("span");
         this.homeBar.className = "home-bar";
-        this.screen.append(this.homeBar);
+        this.overlay.append(this.homeBar);
 
         // CTA toast, slides down from the top edge of the screen
         this.toast = document.createElement("div");
         this.toast.className = "cta-toast";
-        this.screen.append(this.toast);
+        this.overlay.append(this.toast);
         
         // Loading overlay lives inside the phone screen, above the iframe
         this.loadingOverlay = document.getElementById("loading-overlay");
         if (this.loadingOverlay) {
-            this.screen.append(this.loadingOverlay);
+            this.overlay.append(this.loadingOverlay);
         }
 
         // Hide the loader once the iframe is ready
@@ -153,9 +160,14 @@ class Device {
      * Applies the zoom level to the device container.
      */
     setScale() {
-        // Clamp in case localStorage still holds an out-of-range value
+        // No transform: scaling a rasterised iframe is exactly what made deep zoom
+        // blurry. The frame is rebuilt at its real pixel size instead, which is how
+        // fullscreen stays crisp.
         const screenScale = Math.min(300, Math.max(40, parseInt(this.storage.getParameter("screenScale"), 10) || 80));
-        this.parent.style.transform = `scale(${screenScale / 100})`;
+
+        this.parent.style.transform = "none";
+        document.documentElement.style.setProperty("--device-zoom", screenScale / 100);
+        this.resize();
         return screenScale;
     }
 
@@ -190,8 +202,18 @@ class Device {
             height = baseWidth;
         }
 
-        this.iframe.style.width = `${width}px`;
-        this.iframe.style.height = `${height}px`;
+        const zoom = Math.min(300, Math.max(40, parseInt(this.storage.getParameter("screenScale"), 10) || 80)) / 100;
+
+        this.iframe.style.width = `${Math.round(width * zoom)}px`;
+        this.iframe.style.height = `${Math.round(height * zoom)}px`;
+
+        // Engines cache the frame size, so nudge them after the frame changed
+        setTimeout(() => {
+            const win = this.getFrameWindow();
+            if (win) {
+                liftEnginePixelRatioCap(win, Device.renderScale);
+            }
+        }, 60);
     }
     
     /**
@@ -733,29 +755,41 @@ function injectAudioBridge(win) {
 function liftEnginePixelRatioCap(win, scale) {
     try {
         const view = win.cc && win.cc.view;
-        if (!view || !view._maxPixelRatio || view._devicePixelRatio >= scale) {
+        if (!view || typeof view.setDesignResolutionSize !== "function") {
+            return;
+        }
+
+        const frame = view._frameSize;
+        const sameRatio = view._devicePixelRatio >= scale;
+        const sameFrame = frame &&
+            Math.abs(frame.width - win.innerWidth) < 2 &&
+            Math.abs(frame.height - win.innerHeight) < 2;
+        if (sameRatio && sameFrame) {
             return;
         }
 
         // Raising the cap alone does nothing: the ratio is only computed while the
-        // container is set up. Forcing the design resolution again re-runs that
-        // step, and the canvas is re-allocated at the higher resolution.
+        // container is set up. Re-applying the design resolution re-runs that step,
+        // so the canvas is re-allocated at the higher resolution and, just as
+        // importantly, picks up the current frame size after an orientation change.
         view._maxPixelRatio = scale;
         view._devicePixelRatio = scale;
 
         if (typeof view.enableRetina === "function") {
             view.enableRetina(true);
         }
-        if (typeof view.getDesignResolutionSize === "function" &&
-            typeof view.setDesignResolutionSize === "function") {
-            const design = view.getDesignResolutionSize();
-            const policy = typeof view.getResolutionPolicy === "function"
-                ? view.getResolutionPolicy()
-                : undefined;
-            view.setDesignResolutionSize(design.width, design.height, policy);
-        } else if (typeof view._resizeEvent === "function") {
-            view._resizeEvent();
+        if (typeof view.resizeWithBrowserSize === "function") {
+            view.resizeWithBrowserSize(true);
         }
+        if (typeof view._initFrameSize === "function") {
+            view._initFrameSize();
+        }
+
+        const design = view.getDesignResolutionSize();
+        const policy = typeof view.getResolutionPolicy === "function"
+            ? view.getResolutionPolicy()
+            : undefined;
+        view.setDesignResolutionSize(design.width, design.height, policy);
     } catch (e) { }
 }
 
@@ -1044,8 +1078,11 @@ class ThemeControl {
     }
 }
 
-// Rendering scale forced on the game so zooming stays sharp
-Device.renderScale = (typeof DEVICE_CONFIG !== "undefined" && DEVICE_CONFIG.renderScale) || 2;
+// Rendering scale forced on the game. The frame is already built at its real
+// pixel size, so the only extra resolution worth asking for is the screen's own
+// pixel ratio - anything above that just burns GPU for no visible gain.
+Device.renderScale = Math.min(3, Math.max(1,
+    ((typeof DEVICE_CONFIG !== "undefined" && DEVICE_CONFIG.renderScale) || 1) * (window.devicePixelRatio || 1)));
 AudioControl.RENDER_SCALE = Device.renderScale;
 
 /**
