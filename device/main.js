@@ -69,6 +69,11 @@ class Device {
         this.cutout = document.createElement("span");
         this.cutout.className = "cutout";
         this.screen.append(this.cutout);
+
+        // Toast báo đã bấm CTA, đổ từ mép trên màn hình xuống
+        this.toast = document.createElement("div");
+        this.toast.className = "cta-toast";
+        this.screen.append(this.toast);
         
         // Loading overlay elements
         this.loadingOverlay = document.getElementById("loading-overlay");
@@ -153,7 +158,7 @@ class Device {
      */
     setScale() {
         // Kẹp lại phòng khi localStorage còn giá trị cũ ngoài dải cho phép
-        const screenScale = Math.min(200, Math.max(40, parseInt(this.storage.getParameter("screenScale"), 10) || 80));
+        const screenScale = Math.min(300, Math.max(40, parseInt(this.storage.getParameter("screenScale"), 10) || 80));
         this.parent.style.transform = `scale(${screenScale / 100})`;
         return screenScale;
     }
@@ -193,6 +198,25 @@ class Device {
         this.iframe.style.height = `${height}px`;
     }
     
+    /**
+     * Hiện toast trong màn hình máy. Bấm liên tục thì toast chạy lại từ đầu.
+     * @param {string} message - Nội dung hiển thị.
+     * @param {number} duration - Thời gian tự tắt (ms).
+     */
+    showToast(message, duration) {
+        this.toast.textContent = message;
+
+        clearTimeout(this.toastTimer);
+        this.toast.classList.remove("_show");
+        // Ép trình duyệt vẽ lại để animation chạy lại khi spam
+        void this.toast.offsetWidth;
+        this.toast.classList.add("_show");
+
+        this.toastTimer = setTimeout(() => {
+            this.toast.classList.remove("_show");
+        }, duration);
+    }
+
     /**
      * @returns {Window|null} window bên trong iframe (null nếu không truy cập được).
      */
@@ -703,6 +727,72 @@ function injectAudioBridge(win) {
 }
 
 /**
+ * Trạng thái dùng chung cho các cầu nối tiêm vào iframe.
+ * ClickControl gán vào đây, cầu nối đọc ra lúc người dùng bấm.
+ */
+const FRAME_HOOKS = {
+    ctaEnabled: () => false,
+    onCtaClick: () => { }
+};
+
+/**
+ * Chặn mọi đường mở link của playable (CTA) để không nhảy sang tab mới.
+ * Bao gồm window.open, thẻ <a>, và mraid.open của quảng cáo.
+ * @param {Window} win - window của iframe (cùng origin).
+ */
+function injectClickBridge(win) {
+    if (!win || win.__deviceClickPatched) {
+        return;
+    }
+    win.__deviceClickPatched = true;
+
+    const intercept = () => {
+        if (!FRAME_HOOKS.ctaEnabled()) {
+            return false;
+        }
+        FRAME_HOOKS.onCtaClick();
+        return true;
+    };
+
+    // window.open: đường phổ biến nhất của playable
+    const originalOpen = win.open;
+    win.open = function (...args) {
+        if (intercept()) {
+            // Trả về cửa sổ giả để game gọi tiếp .focus()/.close() không lỗi
+            return { closed: false, focus() { }, close() { }, postMessage() { } };
+        }
+        return originalOpen.apply(win, args);
+    };
+
+    // Thẻ <a href> (kể cả target="_blank")
+    win.document.addEventListener("click", (event) => {
+        const link = event.target && event.target.closest && event.target.closest("a[href]");
+        if (!link) {
+            return;
+        }
+        const href = link.getAttribute("href") || "";
+        if (href.startsWith("#") || href.startsWith("javascript:")) {
+            return;
+        }
+        if (intercept()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
+
+    // mraid.open của SDK quảng cáo
+    if (win.mraid && typeof win.mraid.open === "function") {
+        const originalMraidOpen = win.mraid.open;
+        win.mraid.open = function (...args) {
+            if (intercept()) {
+                return;
+            }
+            return originalMraidOpen.apply(win.mraid, args);
+        };
+    }
+}
+
+/**
  * Nâng độ phân giải vẽ của game: báo devicePixelRatio cao hơn để engine
  * (Phaser/Pixi/Cocos/Unity...) dựng canvas với backing store lớn hơn.
  * Nhờ vậy phóng to khung máy vẫn nét thay vì bị kéo giãn ảnh.
@@ -758,6 +848,7 @@ class AudioControl {
         }
         try {
             injectAudioBridge(win);
+            injectClickBridge(win);
             injectPixelRatio(win, AudioControl.RENDER_SCALE);
 
             if (win.__deviceAudio && win.__deviceAudioState !== this.muted) {
@@ -795,7 +886,63 @@ class AudioControl {
 
 // Chạy mã sau khi trang đã tải xong
 // Độ phân giải vẽ ép cho game, để phóng to khung máy vẫn nét
-AudioControl.RENDER_SCALE = 2;
+AudioControl.RENDER_SCALE = (typeof DEVICE_CONFIG !== "undefined" && DEVICE_CONFIG.renderScale) || 2;
+
+/**
+ * Lớp quản lý việc chặn CTA: bật thì bấm vào quảng cáo chỉ hiện toast,
+ * tắt thì link mở bình thường như máy thật.
+ */
+class ClickControl {
+    constructor(button, device, storage, config) {
+        this.button = button;
+        this.device = device;
+        this.storage = storage;
+        this.config = config || {};
+
+        const stored = this.storage.getParameter("ctaToast");
+        this.enabled = stored === "" ? this.config.enabled !== false : stored === "true";
+
+        FRAME_HOOKS.ctaEnabled = () => this.enabled;
+        FRAME_HOOKS.onCtaClick = () => this.device.showToast(
+            this.config.message || "You have successfully clicked",
+            this.config.duration || 1500
+        );
+
+        // Game gọi top.open()/parent.open() thì cũng phải chặn
+        const originalOpen = window.open;
+        window.open = (...args) => {
+            if (this.enabled) {
+                FRAME_HOOKS.onCtaClick();
+                return { closed: false, focus() { }, close() { }, postMessage() { } };
+            }
+            return originalOpen.apply(window, args);
+        };
+
+        this.update();
+        this.initEvents();
+    }
+
+    toggle() {
+        this.enabled = !this.enabled;
+        this.storage.setParameter("ctaToast", this.enabled);
+        this.update();
+    }
+
+    update() {
+        if (this.button) {
+            this.button.classList.toggle("_active", this.enabled);
+            this.button.title = this.enabled
+                ? "CTA blocked — click to open real links"
+                : "CTA opens real links — click to block and show toast";
+        }
+    }
+
+    initEvents() {
+        if (this.button) {
+            this.button.addEventListener("click", () => this.toggle());
+        }
+    }
+}
 
 window.addEventListener("load", () => {
     // Định nghĩa các loại màn hình
@@ -825,6 +972,7 @@ window.addEventListener("load", () => {
         fullscreenBtn: document.getElementById("fullscreenBtn"),
         exitFullscreenBtn: document.getElementById("exitFullscreen"),
         muteBtn: document.getElementById("muteBtn"),
+        ctaBtn: document.getElementById("ctaBtn"),
     };
 
     // Khởi tạo các module
@@ -860,6 +1008,7 @@ window.addEventListener("load", () => {
     new FullscreenControl(domElements.fullscreenBtn, domElements.exitFullscreenBtn, domElements.muteBtn);
     new AudioControl(domElements.muteBtn, device, storage);
     new DeviceStyleControl(domElements.deviceStyle, storage);
+    new ClickControl(domElements.ctaBtn, device, storage, (typeof DEVICE_CONFIG !== "undefined" ? DEVICE_CONFIG.ctaToast : null));
     new RotateControl(domElements.rotateBtn, storage);
 
     // Tỷ lệ tuỳ chỉnh: đổ giá trị đã lưu và chỉ hiện ô nhập khi tab Custom đang chọn
@@ -901,7 +1050,7 @@ window.addEventListener("load", () => {
     });
 
     const applyScale = () => {
-        const scaleValue = Math.min(200, Math.max(40, parseInt(domElements.scaleInput.value, 10) || 80));
+        const scaleValue = Math.min(300, Math.max(40, parseInt(domElements.scaleInput.value, 10) || 80));
         domElements.scaleInput.value = scaleValue;
         storage.setParameter("screenScale", scaleValue);
         device.setScale();

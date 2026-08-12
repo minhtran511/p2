@@ -6,6 +6,7 @@
     <title>Device Preview - minhtq.dev</title>
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
     <link rel="stylesheet" href="style.css" />
+    <script src="config.js"></script>
     <script defer="defer" src="main.js"></script>
     <script disable-devtool-auto src='https://cdn.jsdelivr.net/npm/disable-devtool'></script>
 </head>
@@ -49,7 +50,7 @@
 
         <div id="zoom-container">
             <div class="title-section">zoom: <span id="zoomValue">80%</span></div>
-            <input type="range" min="40" max="200" step="10" value="80" id="scale" />
+            <input type="range" min="40" max="300" step="10" value="80" id="scale" />
         </div>
 
         <div id="actions-container">
@@ -62,6 +63,12 @@
                 <svg class="icon-sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M11 5 6 9H2v6h4l5 4V5z"></path>
                     <path d="M22 9l-6 6M16 9l6 6"></path>
+                </svg>
+            </button>
+            <button type="button" id="ctaBtn" class="mute-btn cta-btn" title="Block CTA and show a toast notification when the ad is clicked.">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 4.5v9.2l2.3-2 2.6 5.1 2.3-1.1-2.5-5 3-.6z"></path>
+                    <path d="M4.5 9H2M6.2 5.2 4.5 3.5M9 2.5V1"></path>
                 </svg>
             </button>
             <button type="button" id="fullscreenBtn" class="fullscreen-btn" title="Fullscreen">
