@@ -723,6 +723,43 @@ function injectAudioBridge(win) {
 }
 
 /**
+ * Some engines clamp the pixel ratio internally, so raising devicePixelRatio is
+ * not enough. Cocos keeps the cap in `cc.view._maxPixelRatio` (2 by default);
+ * lifting it and re-running the resize makes the canvas re-allocate at the
+ * higher resolution, which is what keeps deep zoom sharp.
+ * @param {Window} win - The same-origin iframe window.
+ * @param {number} scale - Desired rendering scale.
+ */
+function liftEnginePixelRatioCap(win, scale) {
+    try {
+        const view = win.cc && win.cc.view;
+        if (!view || !view._maxPixelRatio || view._devicePixelRatio >= scale) {
+            return;
+        }
+
+        // Raising the cap alone does nothing: the ratio is only computed while the
+        // container is set up. Forcing the design resolution again re-runs that
+        // step, and the canvas is re-allocated at the higher resolution.
+        view._maxPixelRatio = scale;
+        view._devicePixelRatio = scale;
+
+        if (typeof view.enableRetina === "function") {
+            view.enableRetina(true);
+        }
+        if (typeof view.getDesignResolutionSize === "function" &&
+            typeof view.setDesignResolutionSize === "function") {
+            const design = view.getDesignResolutionSize();
+            const policy = typeof view.getResolutionPolicy === "function"
+                ? view.getResolutionPolicy()
+                : undefined;
+            view.setDesignResolutionSize(design.width, design.height, policy);
+        } else if (typeof view._resizeEvent === "function") {
+            view._resizeEvent();
+        }
+    } catch (e) { }
+}
+
+/**
  * Shared state for the bridges injected into the iframe.
  * ClickControl writes here, the bridge reads it when a click happens.
  */
@@ -846,6 +883,7 @@ class AudioControl {
             injectAudioBridge(win);
             injectClickBridge(win);
             injectPixelRatio(win, AudioControl.RENDER_SCALE);
+            liftEnginePixelRatioCap(win, AudioControl.RENDER_SCALE);
 
             if (win.__deviceAudio && win.__deviceAudioState !== this.muted) {
                 win.__deviceAudio.set(this.muted);
